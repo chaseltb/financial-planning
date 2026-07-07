@@ -88,19 +88,23 @@ def run_forecast(
     
     revenue_growth = float(business_profile.get("revenue_growth", 0.05))
     expense_growth = float(business_profile.get("expense_growth", 0.03))
-    
+
     ebitda_mult = float(assumptions.get("valuation_multiples", {}).get("ebitda", 6.0))
     entity_type = business_profile.get("entity_type", "Sole Proprietorship")
-    
+    # Only S-Corps/C-Corps can legally run payroll and pay the owner W-2 wages.
+    # Sole proprietors and LLC members take an owner's draw instead — the full net
+    # profit stays subject to self-employment tax, so "owner salary" doesn't apply.
+    entity_pays_owner_w2 = entity_type in ("S Corporation", "C Corporation")
+    # This taxpayer's ownership stake (0.0-1.0). Distributions are this owner's
+    # pro-rata share of net income after owner salary — not a separate manual input.
+    ownership_pct = max(0.0, min(1.0, float(business_profile.get("ownership_pct", 100.0)) / 100.0))
+
     forecast_rows = []
-    
+
     # Personal profile and non-business income for tax calculations
     personal_income_base = {}
     for inc in personal_income_list:
         category = inc.get("category")
-        # Exclude W-2 if it's the owner salary (which is updated dynamically from S-Corp/C-Corp owner_salary)
-        if category == "W-2" and inc.get("description") == "Business Owner Salary":
-            continue
         personal_income_base[category] = personal_income_base.get(category, 0.0) + float(inc.get("amount", 0.0))
         
     retirement_contributions = {
@@ -124,12 +128,13 @@ def run_forecast(
         expenses = q_overrides.get("Expenses", prev_expenses * (1 + expense_growth))
         capex = q_overrides.get("Capital expenditures", prev_capex)
         
-        owner_salary = q_overrides.get("Owner salary", float(business_profile.get("owner_salary", 0.0)) / 4.0)
-        distributions = q_overrides.get("Distributions", float(business_profile.get("distributions", 0.0)) / 4.0)
-        
+        raw_owner_salary = q_overrides.get("Owner salary", float(business_profile.get("owner_salary", 0.0)) / 4.0)
+        # Only apply the owner-salary payroll deduction for entities that can actually run payroll.
+        owner_salary = raw_owner_salary if entity_pays_owner_w2 else 0.0
+
         # Calculate EBITDA
         ebitda = rev - cogs - payroll - expenses
-        
+
         # 2. Estimate taxes dynamically using engines
         # Business net profit for the quarter (quarterly profit before tax and owner salary for pass-throughs,
         # but for S-Corp/C-Corp, owner salary is an expense reducing business net profit)
@@ -137,20 +142,26 @@ def run_forecast(
         # Payroll usually includes standard employee payroll. Owner salary is separate or part of payroll.
         # Let's assume payroll does NOT include owner salary, so business net income = EBITDA - Owner Salary.
         net_biz_income_quarter = ebitda - owner_salary
-        
+
+        # Distributions = this owner's pro-rata share of net income, assumed fully paid
+        # out in cash each quarter (unless a manual override is set for this quarter).
+        distributions = q_overrides.get("Distributions", max(0.0, net_biz_income_quarter) * ownership_pct)
+
         # Annualize net profit and owner salary to run tax engine
         annual_net_biz_income = net_biz_income_quarter * 4
         annual_owner_salary = owner_salary * 4
-        
+
         # Update personal income dict for tax engine (injecting owner salary W-2 if applicable)
         personal_income_tax_run = dict(personal_income_base)
         personal_income_tax_run["W-2"] = personal_income_tax_run.get("W-2", 0.0) + annual_owner_salary
-        
+
         # Run Federal Tax Engine
         fed_tax_calc = calculate_federal_tax(
             personal_income=personal_income_tax_run,
             business_net_income=annual_net_biz_income,
             business_entity=entity_type,
+            owner_w2_salary=annual_owner_salary,
+            ownership_pct=ownership_pct,
             retirement_contributions=retirement_contributions,
             filing_status=filing_status,
             rules=fed_rules
@@ -218,6 +229,7 @@ def run_forecast(
     return {
         "forecast_df": combined_df,
         "only_forecast_df": forecast_df,
+        "history_df": history_df,
         "trace": {
             "formula": "Future Cash = Prev Cash + Quarterly Operating Cash Flow - Distributions - Taxes",
             "inputs": {

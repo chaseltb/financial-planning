@@ -162,7 +162,11 @@ def populate_forecast_page(state, horizon):
     forecast_df = results["forecast_df"]
     only_df = results["only_forecast_df"]
 
-    spreadsheet = render_editable_table("forecast-spreadsheet", forecast_df, _FC_COLS, add_row_btn=False)
+    spreadsheet = render_editable_table(
+        "forecast-spreadsheet", forecast_df, _FC_COLS,
+        add_row_btn=False,
+        empty_label="quarterly records",
+    )
 
     fig_op = go.Figure()
     fig_op.add_trace(go.Bar(x=only_df["Quarter"], y=only_df["Revenue"],
@@ -206,11 +210,16 @@ def update_horizon_store(val):
     prevent_initial_call=True,
 )
 def persist_forecast_edits(forecast_data, current_state, active_scenario):
+    # forecast_data is None when the table is in empty-state mode (no DataTable rendered)
     if current_state is None or forecast_data is None:
         return no_update, no_update
 
     ctx = callback_context
     if not ctx.triggered:
+        return no_update, no_update
+
+    # Only process rows that have been edited (non-empty Quarter)
+    if not forecast_data:
         return no_update, no_update
 
     new_state = copy.deepcopy(current_state)
