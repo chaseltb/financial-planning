@@ -208,6 +208,61 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .form-control:focus, .form-select:focus {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
     border-color: var(--accent-blue) !important;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
+}
+
+/* Bootswatch SLATE ships a low-contrast gray-on-gray input-group-text
+   (prefix/suffix like "$" or "/yr") that was never re-themed for dark mode. */
+.input-group-text {
+    background-color: var(--bg-secondary) !important;
+    border: 1px solid var(--border-glass) !important;
+    color: var(--text-secondary) !important;
+}
+
+/* Highlight the whole prefix/suffix group when the inner input is focused,
+   instead of the input looking isolated from its "$"/"/yr" decoration. */
+.input-group:focus-within .input-group-text {
+    border-color: var(--accent-blue) !important;
+    color: var(--text-primary) !important;
+}
+
+.input-group:focus-within .form-control {
+    z-index: 3;
+}
+
+/* Disabled/read-only inputs should stay legible, not fall back to the
+   browser/Bootstrap default light-gray-on-gray. */
+.form-control:disabled, .form-control[readonly],
+.form-select:disabled {
+    background-color: rgba(30, 41, 59, 0.5) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-glass) !important;
+    opacity: 1 !important;
+}
+
+.form-control::placeholder {
+    color: var(--text-secondary) !important;
+    opacity: 0.7;
+}
+
+/* Out-of-range values get a clear, high-contrast warning instead of the
+   browser's default (which can render as a dim/gray outline on dark themes). */
+.form-control:invalid, .form-control.is-invalid {
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25) !important;
+}
+
+/* Dash dims any component that is the Output of a currently-running callback
+   (e.g. right after you blur a field). Keep inputs at full contrast instead
+   of fading toward gray while a save round-trip is in flight. */
+input.form-control, select.form-select {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dash-loading, ._dash-loading-callback, .form-control[data-dash-is-loading="true"] {
+    opacity: 1 !important;
+    filter: none !important;
 }
