@@ -19,10 +19,17 @@ def layout():
                     dbc.Col(
                         html.Div(
                             [
-                                html.H4("Tax Rules & Display Defaults", className="mb-4"),
+                                html.H4(
+                                    [html.I(className="bi bi-sliders me-2 text-info"), "Tax Rules & Display Defaults"],
+                                    className="mb-4"
+                                ),
                                 html.Div(
                                     [
-                                        html.Label("Filing/Planning Tax Year"),
+                                        html.Label(
+                                            [html.I(className="bi bi-calendar3 me-1 text-muted"), "Filing / Planning Tax Year"],
+                                            id="label-tax-year", className="form-label",
+                                        ),
+                                        dbc.Tooltip("The tax year whose rules and brackets will be used for all calculations.", target="label-tax-year"),
                                         dcc.Dropdown(
                                             id="settings-tax-year",
                                             options=[{"label": "2026 Rules", "value": 2026}],
@@ -31,8 +38,12 @@ def layout():
                                             className="mb-3",
                                             style={"color": "#0f172a"}
                                         ),
-                                        
-                                        html.Label("Planning State"),
+
+                                        html.Label(
+                                            [html.I(className="bi bi-geo-alt me-1 text-muted"), "Planning State"],
+                                            id="label-state", className="form-label",
+                                        ),
+                                        dbc.Tooltip("State whose income tax rules will be applied. Currently supports North Carolina.", target="label-state"),
                                         dcc.Dropdown(
                                             id="settings-state",
                                             options=[{"label": "North Carolina (NC)", "value": "NC"}],
@@ -41,8 +52,12 @@ def layout():
                                             className="mb-3",
                                             style={"color": "#0f172a"}
                                         ),
-                                        
-                                        html.Label("Theme Selection"),
+
+                                        html.Label(
+                                            [html.I(className="bi bi-palette me-1 text-muted"), "Theme Selection"],
+                                            id="label-theme", className="form-label",
+                                        ),
+                                        dbc.Tooltip("Switch between dark and light interface themes.", target="label-theme"),
                                         dcc.Dropdown(
                                             id="settings-theme",
                                             options=[
@@ -54,7 +69,7 @@ def layout():
                                             className="mb-3",
                                             style={"color": "#0f172a"}
                                         ),
-                                        
+
                                         dbc.Checklist(
                                             options=[
                                                 {"label": "Enable Autosave", "value": "autosave"}
@@ -71,13 +86,16 @@ def layout():
                         ),
                         lg=4
                     ),
-                    
+
                     # Backups, Imports, Exports
                     dbc.Col(
                         [
                             html.Div(
                                 [
-                                    html.H4("Export Model Configuration", className="mb-3"),
+                                    html.H4(
+                                        [html.I(className="bi bi-cloud-download me-2 text-info"), "Export Model Configuration"],
+                                        className="mb-3"
+                                    ),
                                     html.P(
                                         "Download your entire profile, business settings, assets, liabilities, and quarterly forecast as a backup JSON file or an Excel workbook.",
                                         className="text-muted",
@@ -85,8 +103,14 @@ def layout():
                                     ),
                                     html.Div(
                                         [
-                                            dbc.Button("Download Full JSON Backup", id="settings-export-json-btn", color="primary", className="me-2 mb-2"),
-                                            dbc.Button("Download Excel Sheet", id="settings-export-excel-btn", color="success", className="me-2 mb-2"),
+                                            dbc.Button(
+                                                [html.I(className="bi bi-filetype-json me-1"), "Download Full JSON Backup"],
+                                                id="settings-export-json-btn", color="primary", className="me-2 mb-2"
+                                            ),
+                                            dbc.Button(
+                                                [html.I(className="bi bi-file-earmark-spreadsheet me-1"), "Download Excel Sheet"],
+                                                id="settings-export-excel-btn", color="success", className="me-2 mb-2"
+                                            ),
                                             dcc.Download(id="settings-download-component")
                                         ],
                                         className="d-flex flex-wrap"
@@ -94,10 +118,13 @@ def layout():
                                 ],
                                 className="glass-card mb-4"
                             ),
-                            
+
                             html.Div(
                                 [
-                                    html.H4("Import Backup Data", className="mb-3"),
+                                    html.H4(
+                                        [html.I(className="bi bi-cloud-upload me-2 text-info"), "Import Backup Data"],
+                                        className="mb-3"
+                                    ),
                                     html.P(
                                         "Drag and drop a previously exported JSON backup file here to restore your planning workspace.",
                                         className="text-muted",
@@ -107,6 +134,7 @@ def layout():
                                         id="settings-import-upload",
                                         children=html.Div(
                                             [
+                                                html.I(className="bi bi-upload me-2"),
                                                 "Drag and Drop or ",
                                                 html.A("Select Files", style={"color": "var(--accent-blue)"})
                                             ]
@@ -137,6 +165,7 @@ def layout():
         ],
         fluid=True
     )
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

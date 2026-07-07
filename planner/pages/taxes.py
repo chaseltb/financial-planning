@@ -20,23 +20,56 @@ def layout():
                         [
                             html.Div(
                                 [
-                                    html.H4("Tax Liability Breakdown", className="mb-4"),
+                                    html.H4(
+                                        [html.I(className="bi bi-receipt-cutoff me-2 text-info"), "Tax Liability Breakdown"],
+                                        className="mb-4"
+                                    ),
                                     dbc.Row(
                                         [
-                                            dbc.Col([html.Div("Federal Personal Tax", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                     html.H4(id="tax-breakdown-fed")], width=4, className="mb-3"),
-                                            dbc.Col([html.Div("NC State Tax", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                     html.H4(id="tax-breakdown-nc")], width=4, className="mb-3"),
-                                            dbc.Col([html.Div("Payroll & SE Tax", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                     html.H4(id="tax-breakdown-payroll")], width=4, className="mb-3"),
-                                            dbc.Col([html.Div("Corporate Income Tax", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                     html.H4(id="tax-breakdown-corp")], width=4, className="mb-3"),
-                                            dbc.Col([html.Div("Combined Total Tax", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                     html.H4(id="tax-breakdown-combined",
-                                                             style={"color": "var(--accent-purple)"})], width=4, className="mb-3"),
-                                            dbc.Col([html.Div("Effective Tax Rate", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                     html.H4(id="tax-breakdown-effective-rate",
-                                                             style={"color": "var(--accent-emerald)"})], width=4, className="mb-3"),
+                                            dbc.Col([
+                                                html.Div(
+                                                    [html.I(className="bi bi-flag-fill me-1 text-muted"), "Federal Personal Tax"],
+                                                    className="text-muted", style={"fontSize": "0.8rem"}
+                                                ),
+                                                html.H4(id="tax-breakdown-fed"),
+                                            ], width=4, className="mb-3"),
+                                            dbc.Col([
+                                                html.Div(
+                                                    [html.I(className="bi bi-geo-alt-fill me-1 text-muted"), "NC State Tax"],
+                                                    className="text-muted", style={"fontSize": "0.8rem"}
+                                                ),
+                                                html.H4(id="tax-breakdown-nc"),
+                                            ], width=4, className="mb-3"),
+                                            dbc.Col([
+                                                html.Div(
+                                                    [html.I(className="bi bi-person-badge me-1 text-muted"), "Payroll & SE Tax"],
+                                                    className="text-muted", style={"fontSize": "0.8rem"}
+                                                ),
+                                                html.H4(id="tax-breakdown-payroll"),
+                                            ], width=4, className="mb-3"),
+                                            dbc.Col([
+                                                html.Div(
+                                                    [html.I(className="bi bi-building me-1 text-muted"), "Corporate Income Tax"],
+                                                    className="text-muted", style={"fontSize": "0.8rem"}
+                                                ),
+                                                html.H4(id="tax-breakdown-corp"),
+                                            ], width=4, className="mb-3"),
+                                            dbc.Col([
+                                                html.Div(
+                                                    [html.I(className="bi bi-calculator me-1 text-muted"), "Combined Total Tax"],
+                                                    className="text-muted", style={"fontSize": "0.8rem"}
+                                                ),
+                                                html.H4(id="tax-breakdown-combined",
+                                                         style={"color": "var(--accent-purple)"}),
+                                            ], width=4, className="mb-3"),
+                                            dbc.Col([
+                                                html.Div(
+                                                    [html.I(className="bi bi-percent me-1 text-muted"), "Effective Tax Rate"],
+                                                    className="text-muted", style={"fontSize": "0.8rem"}
+                                                ),
+                                                html.H4(id="tax-breakdown-effective-rate",
+                                                         style={"color": "var(--accent-emerald)"}),
+                                            ], width=4, className="mb-3"),
                                         ]
                                     ),
                                     html.Hr(style={"borderColor": "rgba(255,255,255,0.08)"}),
@@ -47,7 +80,10 @@ def layout():
                             ),
                             html.Div(
                                 [
-                                    html.H4("Progressive Tax Bracket Visualization", className="mb-3"),
+                                    html.H4(
+                                        [html.I(className="bi bi-bar-chart-steps me-2 text-info"), "Progressive Tax Bracket Visualization"],
+                                        className="mb-3"
+                                    ),
                                     html.Div(id="tax-brackets-visualizer"),
                                 ],
                                 className="glass-card mb-4",
@@ -68,6 +104,7 @@ def layout():
         ],
         fluid=True,
     )
+
 
 
 @callback(

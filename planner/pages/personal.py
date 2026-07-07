@@ -45,7 +45,11 @@ def layout():
                         html.Div(
                             [
                                 html.H4("Tax Filing & Retirement Savings", className="mb-4"),
-                                html.Label("Filing Status"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Filing Status"],
+                                    id="label-filing"
+                                ),
                                 dcc.Dropdown(
                                     id={"type": "profile-input", "field": "filing_status"},
                                     options=[
@@ -57,18 +61,75 @@ def layout():
                                     className="mb-3",
                                     style={"color": "#0f172a"},
                                 ),
-                                html.Label("401(k) Contribution ($/yr)"),
-                                dbc.Input(id={"type": "profile-input", "field": "retirement_401k"},
-                                          type="number", value=0, className="mb-3"),
-                                html.Label("IRA Contribution ($/yr)"),
-                                dbc.Input(id={"type": "profile-input", "field": "retirement_ira"},
-                                          type="number", value=0, className="mb-3"),
-                                html.Label("HSA Contribution ($/yr)"),
-                                dbc.Input(id={"type": "profile-input", "field": "retirement_hsa"},
-                                          type="number", value=0, className="mb-3"),
-                                html.Label("Solo 401(k) / SEP IRA ($/yr)"),
-                                dbc.Input(id={"type": "profile-input", "field": "solo_401k"},
-                                          type="number", value=0, className="mb-3"),
+                                dbc.Tooltip("Filing status affects federal & state progressive tax brackets and standard deductions.", target="label-filing"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "401(k) Contribution"],
+                                    id="label-401k"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.InputGroupText("$"),
+                                        dbc.Input(
+                                            id={"type": "profile-input", "field": "retirement_401k"},
+                                            type="number", min=0, max=100000, step=500, value=0
+                                        ),
+                                        dbc.InputGroupText("/yr"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Individual employee 401(k) contribution limit for 2026 is $23,500 (plus $7,500 catch-up if 50+).", target="label-401k"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "IRA Contribution"],
+                                    id="label-ira"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.InputGroupText("$"),
+                                        dbc.Input(
+                                            id={"type": "profile-input", "field": "retirement_ira"},
+                                            type="number", min=0, max=50000, step=500, value=0
+                                        ),
+                                        dbc.InputGroupText("/yr"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Traditional/Roth IRA contribution limit for 2026 is $7,000 (plus $1,000 catch-up if 50+).", target="label-ira"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "HSA Contribution"],
+                                    id="label-hsa"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.InputGroupText("$"),
+                                        dbc.Input(
+                                            id={"type": "profile-input", "field": "retirement_hsa"},
+                                            type="number", min=0, max=20000, step=100, value=0
+                                        ),
+                                        dbc.InputGroupText("/yr"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("HSA 2026 limits: $4,300 for individuals, $8,550 for family coverage.", target="label-hsa"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Solo 401(k) / SEP IRA"],
+                                    id="label-solo"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.InputGroupText("$"),
+                                        dbc.Input(
+                                            id={"type": "profile-input", "field": "solo_401k"},
+                                            type="number", min=0, max=150000, step=1000, value=0
+                                        ),
+                                        dbc.InputGroupText("/yr"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Self-employed retirement contributions (Solo 401k profit-sharing / SEP IRA limits up to $69,000 in 2026).", target="label-solo"),
                             ],
                             className="glass-card mb-4",
                         ),
@@ -77,13 +138,23 @@ def layout():
                     dbc.Col(
                         [
                             html.Div(
-                                [html.H4("Income Streams (Annual)", className="mb-3"),
-                                 html.Div(id="personal-income-table-container")],
+                                [
+                                    html.H4(
+                                        [html.I(className="bi bi-wallet2 me-2 text-primary"), "Income Streams (Annual)"],
+                                        className="mb-3"
+                                    ),
+                                    html.Div(id="personal-income-table-container")
+                                ],
                                 className="glass-card mb-4",
                             ),
                             html.Div(
-                                [html.H4("Living Expenses (Annual)", className="mb-3"),
-                                 html.Div(id="personal-expenses-table-container")],
+                                [
+                                    html.H4(
+                                        [html.I(className="bi bi-cart4 me-2 text-danger"), "Living Expenses (Annual)"],
+                                        className="mb-3"
+                                    ),
+                                    html.Div(id="personal-expenses-table-container")
+                                ],
                                 className="glass-card mb-4",
                             ),
                         ],
@@ -95,16 +166,26 @@ def layout():
                 [
                     dbc.Col(
                         html.Div(
-                            [html.H4("Assets", className="mb-3"),
-                             html.Div(id="personal-assets-table-container")],
+                            [
+                                html.H4(
+                                    [html.I(className="bi bi-gem me-2 text-success"), "Assets"],
+                                    className="mb-3"
+                                ),
+                                html.Div(id="personal-assets-table-container")
+                            ],
                             className="glass-card mb-4",
                         ),
                         lg=6,
                     ),
                     dbc.Col(
                         html.Div(
-                            [html.H4("Liabilities", className="mb-3"),
-                             html.Div(id="personal-liabilities-table-container")],
+                            [
+                                html.H4(
+                                    [html.I(className="bi bi-credit-card-2-front me-2 text-warning"), "Liabilities"],
+                                    className="mb-3"
+                                ),
+                                html.Div(id="personal-liabilities-table-container")
+                            ],
                             className="glass-card mb-4",
                         ),
                         lg=6,
@@ -180,7 +261,14 @@ def persist_personal_edits(
     if "profile-input" in triggered:
         for pid, val in zip(profile_ids, profile_vals):
             if val is not None:
-                new_state["profile"][pid["field"]] = val
+                field = pid["field"]
+                # Input validation: coerce numeric fields to be >= 0
+                if field in ["retirement_401k", "retirement_ira", "retirement_hsa", "solo_401k"]:
+                    try:
+                        val = max(0.0, float(val or 0.0))
+                    except ValueError:
+                        val = 0.0
+                new_state["profile"][field] = val
     elif "income-table" in triggered and inc_data is not None:
         new_state["income"] = inc_data
     elif "expenses-table" in triggered and exp_data is not None:

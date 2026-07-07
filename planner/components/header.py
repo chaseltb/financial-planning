@@ -39,7 +39,7 @@ def render_header():
                         style={"width": "180px", "display": "inline-block", "color": "#0f172a"},
                     ),
                     html.Span(
-                        "● Auto-saved",
+                        [html.I(className="bi bi-cloud-check-fill me-1"), "Auto-saved"],
                         id="save-status-indicator",
                         className="ms-3",
                         style={"fontSize": "0.85rem", "color": "var(--accent-emerald)"},

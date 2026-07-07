@@ -19,10 +19,14 @@ def layout():
             dbc.Row(
                 [
                     dbc.Col(
+                        [
                         html.Div(
                             [
                                 html.H4("Entity Choice & Growth Settings", className="mb-4"),
-                                html.Label("Business Entity Type"),
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Business Entity Type"],
+                                    id="label-entity-type"
+                                ),
                                 dcc.Dropdown(
                                     id={"type": "business-input", "field": "entity_type"},
                                     options=[
@@ -37,57 +41,186 @@ def layout():
                                     className="mb-3",
                                     style={"color": "#0f172a"},
                                 ),
-                                html.Label("W-2 Owner's Salary (from Business, $/yr)"),
-                                dbc.Input(id={"type": "business-input", "field": "owner_salary"},
-                                          type="number", value=0, className="mb-3"),
-                                html.Label("Owner Profit Distributions ($/yr)"),
-                                dbc.Input(id={"type": "business-input", "field": "distributions"},
-                                          type="number", value=0, className="mb-3"),
-                                html.Label("Quarterly Revenue Growth"),
-                                dbc.Input(id={"type": "business-input", "field": "revenue_growth"},
-                                          type="number", step=0.01, value=0.05, className="mb-3"),
-                                html.Label("Quarterly Expense Growth"),
-                                dbc.Input(id={"type": "business-input", "field": "expense_growth"},
-                                          type="number", step=0.01, value=0.03, className="mb-3"),
+                                dbc.Tooltip("Entity structure affects payroll requirements, self-employment taxes, and corporate rates.", target="label-entity-type"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "W-2 Owner's Salary"],
+                                    id="label-owner-salary"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.InputGroupText("$"),
+                                        dbc.Input(
+                                            id={"type": "business-input", "field": "owner_salary"},
+                                            type="number", min=0, step=1000, value=0
+                                        ),
+                                        dbc.InputGroupText("/yr"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Annual W-2 wages paid to the owner. S-Corps require a 'reasonable W-2 salary' under IRS rules.", target="label-owner-salary"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Owner Profit Distributions"],
+                                    id="label-distributions"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.InputGroupText("$"),
+                                        dbc.Input(
+                                            id={"type": "business-input", "field": "distributions"},
+                                            type="number", min=0, step=1000, value=0
+                                        ),
+                                        dbc.InputGroupText("/yr"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Annual dividends or cash distributions to the owner, not subject to self-employment tax.", target="label-distributions"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Quarterly Revenue Growth"],
+                                    id="label-revenue-growth"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.Input(
+                                            id={"type": "business-input", "field": "revenue_growth"},
+                                            type="number", step=0.01, value=0.05
+                                        ),
+                                        dbc.InputGroupText("% / quarter"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Compounding quarterly growth rate applied to project revenue forward.", target="label-revenue-growth"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Quarterly Expense Growth"],
+                                    id="label-expense-growth"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.Input(
+                                            id={"type": "business-input", "field": "expense_growth"},
+                                            type="number", step=0.01, value=0.03
+                                        ),
+                                        dbc.InputGroupText("% / quarter"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Compounding quarterly growth rate applied to project operating expenses forward.", target="label-expense-growth"),
                             ],
                             className="glass-card mb-4",
                         ),
                         html.Div(
                             [
-                                html.H4("Business Revenue & Expenses (Annual Run-Rate)", className="mb-4"),
-                                html.Label("Annual Revenue ($/yr)"),
-                                dbc.Input(id={"type": "business-financials-input", "field": "revenue"},
-                                          type="number", value=0, className="mb-3"),
-                                html.Label("Annual COGS ($/yr)"),
-                                dbc.Input(id={"type": "business-financials-input", "field": "cogs"},
-                                          type="number", value=0, className="mb-3"),
-                                html.Label("Annual Payroll — Non-Owner Staff ($/yr)"),
-                                dbc.Input(id={"type": "business-financials-input", "field": "payroll"},
-                                          type="number", value=0, className="mb-3"),
-                                html.Label("Annual Operating Expenses ($/yr)"),
-                                dbc.Input(id={"type": "business-financials-input", "field": "expenses"},
-                                          type="number", value=0, className="mb-3"),
-                                html.Label("Annual Capital Expenditures ($/yr)"),
-                                dbc.Input(id={"type": "business-financials-input", "field": "capex"},
-                                          type="number", value=0, className="mb-3"),
+                                html.H4("Business Run-Rate Financials (Annualized)", className="mb-4"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Annual Revenue"],
+                                    id="label-biz-rev"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.InputGroupText("$"),
+                                        dbc.Input(
+                                            id={"type": "business-financials-input", "field": "revenue"},
+                                            type="number", min=0, step=1000, value=0
+                                        ),
+                                        dbc.InputGroupText("/yr"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Total annualized gross revenue generated by the business operations.", target="label-biz-rev"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Annual COGS"],
+                                    id="label-biz-cogs"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.InputGroupText("$"),
+                                        dbc.Input(
+                                            id={"type": "business-financials-input", "field": "cogs"},
+                                            type="number", min=0, step=1000, value=0
+                                        ),
+                                        dbc.InputGroupText("/yr"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Annual Cost of Goods Sold (direct manufacturing, labor, or production costs).", target="label-biz-cogs"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Annual Payroll (Non-Owner staff)"],
+                                    id="label-biz-pay"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.InputGroupText("$"),
+                                        dbc.Input(
+                                            id={"type": "business-financials-input", "field": "payroll"},
+                                            type="number", min=0, step=1000, value=0
+                                        ),
+                                        dbc.InputGroupText("/yr"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Annual gross wages and payroll tax paid to non-owner employees.", target="label-biz-pay"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Annual Operating Expenses"],
+                                    id="label-biz-exp"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.InputGroupText("$"),
+                                        dbc.Input(
+                                            id={"type": "business-financials-input", "field": "expenses"},
+                                            type="number", min=0, step=1000, value=0
+                                        ),
+                                        dbc.InputGroupText("/yr"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Annual overhead expenses (rent, utilities, software, marketing, insurance, legal).", target="label-biz-exp"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Annual Capital Expenditures"],
+                                    id="label-biz-capex"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.InputGroupText("$"),
+                                        dbc.Input(
+                                            id={"type": "business-financials-input", "field": "capex"},
+                                            type="number", min=0, step=1000, value=0
+                                        ),
+                                        dbc.InputGroupText("/yr"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Annual investments in fixed assets like machinery, real estate, or vehicles.", target="label-biz-capex"),
                             ],
                             className="glass-card mb-4",
                         ),
+                        ],
                         lg=4,
                     ),
                     dbc.Col(
                         [
                             html.Div(
                                 [
-                                    html.H4("Business Operating Summary", className="mb-3"),
+                                    html.H4(
+                                        [html.I(className="bi bi-calculator me-2 text-primary"), "Business Operating Summary"],
+                                        className="mb-3"
+                                    ),
                                     dbc.Row(
                                         [
-                                            dbc.Col([html.Div("EBITDA", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                     html.H3(id="biz-ebitda-val", style={"color": "var(--accent-emerald)"})], width=4),
-                                            dbc.Col([html.Div("Net Income", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                     html.H3(id="biz-netincome-val", style={"color": "var(--accent-blue)"})], width=4),
-                                            dbc.Col([html.Div("Operating Margin", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                     html.H3(id="biz-margin-val")], width=4),
+                                            dbc.Col([html.Div("EBITDA", className="text-muted", style={"fontSize": "0.85rem"}),
+                                                     html.H3(id="biz-ebitda-val", style={"color": "var(--accent-emerald)", "fontWeight": "bold"})], width=4),
+                                            dbc.Col([html.Div("Net Income", className="text-muted", style={"fontSize": "0.85rem"}),
+                                                     html.H3(id="biz-netincome-val", style={"color": "var(--accent-blue)", "fontWeight": "bold"})], width=4),
+                                            dbc.Col([html.Div("Operating Margin", className="text-muted", style={"fontSize": "0.85rem"}),
+                                                     html.H3(id="biz-margin-val", style={"fontWeight": "bold"})], width=4),
                                         ],
                                         className="mb-4",
                                     ),
@@ -95,8 +228,13 @@ def layout():
                                 className="glass-card mb-4",
                             ),
                             html.Div(
-                                [html.H4("Operating Trends", className="mb-3"),
-                                 dcc.Graph(id="business-forecast-trend-chart")],
+                                [
+                                    html.H4(
+                                        [html.I(className="bi bi-graph-up-arrow me-2 text-success"), "Operating Trends"],
+                                        className="mb-3"
+                                    ),
+                                    dcc.Graph(id="business-forecast-trend-chart")
+                                ],
                                 className="glass-card mb-4",
                             ),
                         ],
@@ -168,7 +306,18 @@ def persist_business_edits(biz_vals, biz_ids, current_state, active_scenario):
     new_state = copy.deepcopy(current_state)
     for bid, val in zip(biz_ids, biz_vals):
         if val is not None:
-            new_state["business"][bid["field"]] = val
+            field = bid["field"]
+            if field in ["owner_salary", "distributions"]:
+                try:
+                    val = max(0.0, float(val or 0.0))
+                except ValueError:
+                    val = 0.0
+            elif field in ["revenue_growth", "expense_growth"]:
+                try:
+                    val = max(-1.0, min(5.0, float(val or 0.0)))
+                except ValueError:
+                    val = 0.0
+            new_state["business"][field] = val
 
     try:
         save_project_state(new_state, active_scenario)
@@ -245,7 +394,11 @@ def persist_business_financials(vals, ids, current_state, active_scenario):
     }
     for field, col in col_by_field.items():
         if field in field_map:
-            last[col] = float(field_map[field]) / 4.0
+            try:
+                val = max(0.0, float(field_map[field] or 0.0))
+            except ValueError:
+                val = 0.0
+            last[col] = val / 4.0
 
     revenue = float(last.get("Revenue", 0) or 0)
     cogs = float(last.get("COGS", 0) or 0)

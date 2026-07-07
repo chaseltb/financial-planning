@@ -27,76 +27,76 @@
   "custom_valuation_multiplier": 3,
   "forecast_overrides": {
     "2026-Q1": {
-      "Revenue": 147000,
-      "COGS": 29400,
-      "Payroll": 33990,
-      "Expenses": 16995,
-      "Capital expenditures": 1500,
-      "Owner salary": 0,
-      "Distributions": 1000
+      "Revenue": 35175,
+      "COGS": 7035,
+      "Payroll": 3296,
+      "Expenses": 2884,
+      "Capital expenditures": 600,
+      "Owner salary": 8750,
+      "Distributions": 1500
     },
     "2026-Q2": {
-      "Revenue": 154350,
-      "COGS": 30870,
-      "Payroll": 35009.700000000004,
-      "Expenses": 17504.850000000002,
-      "Capital expenditures": 1500,
-      "Owner salary": 0,
-      "Distributions": 1000
+      "Revenue": 36933.75,
+      "COGS": 7386.75,
+      "Payroll": 3394.88,
+      "Expenses": 2970.52,
+      "Capital expenditures": 600,
+      "Owner salary": 8750,
+      "Distributions": 1500
     },
     "2026-Q3": {
-      "Revenue": 162067.5,
-      "COGS": 32413.5,
-      "Payroll": 36059.991,
-      "Expenses": 18029.9955,
-      "Capital expenditures": 1500,
-      "Owner salary": 0,
-      "Distributions": 1000
+      "Revenue": 38780.4375,
+      "COGS": 7756.087500000001,
+      "Payroll": 3496.7264,
+      "Expenses": 3059.6356,
+      "Capital expenditures": 600,
+      "Owner salary": 8750,
+      "Distributions": 1500
     },
     "2026-Q4": {
-      "Revenue": 170170.875,
-      "COGS": 34034.175,
-      "Payroll": 37141.79073,
-      "Expenses": 18570.895365,
-      "Capital expenditures": 1500,
-      "Owner salary": 0,
-      "Distributions": 1000
+      "Revenue": 40719.459375,
+      "COGS": 8143.891875,
+      "Payroll": 3601.628192,
+      "Expenses": 3151.424668,
+      "Capital expenditures": 600,
+      "Owner salary": 8750,
+      "Distributions": 1500
     },
     "2027-Q1": {
-      "Revenue": 178679.41875,
-      "COGS": 35735.88375,
-      "Payroll": 38256.0444519,
-      "Expenses": 19128.02222595,
-      "Capital expenditures": 1500,
-      "Owner salary": 0,
-      "Distributions": 1000
+      "Revenue": 42755.43234375,
+      "COGS": 8551.08646875,
+      "Payroll": 3709.67703776,
+      "Expenses": 3245.96740804,
+      "Capital expenditures": 600,
+      "Owner salary": 8750,
+      "Distributions": 1500
     },
     "2027-Q2": {
-      "Revenue": 187613.38968750002,
-      "COGS": 37522.677937500004,
-      "Payroll": 39403.725785457005,
-      "Expenses": 19701.862892728503,
-      "Capital expenditures": 1500,
-      "Owner salary": 0,
-      "Distributions": 1000
+      "Revenue": 44893.2039609375,
+      "COGS": 8978.6407921875,
+      "Payroll": 3820.9673488928,
+      "Expenses": 3343.3464302812,
+      "Capital expenditures": 600,
+      "Owner salary": 8750,
+      "Distributions": 1500
     },
     "2027-Q3": {
-      "Revenue": 196994.05917187504,
-      "COGS": 39398.81183437501,
-      "Payroll": 40585.837559020714,
-      "Expenses": 20292.918779510357,
-      "Capital expenditures": 1500,
-      "Owner salary": 0,
-      "Distributions": 1000
+      "Revenue": 47137.864158984376,
+      "COGS": 9427.572831796875,
+      "Payroll": 3935.596369359584,
+      "Expenses": 3443.646823189636,
+      "Capital expenditures": 600,
+      "Owner salary": 8750,
+      "Distributions": 1500
     },
     "2027-Q4": {
-      "Revenue": 206843.7621304688,
-      "COGS": 41368.752426093764,
-      "Payroll": 41803.412685791336,
-      "Expenses": 20901.706342895668,
-      "Capital expenditures": 1500,
-      "Owner salary": 0,
-      "Distributions": 1000
+      "Revenue": 49494.7573669336,
+      "COGS": 9898.95147338672,
+      "Payroll": 4053.664260440372,
+      "Expenses": 3546.956227885325,
+      "Capital expenditures": 600,
+      "Owner salary": 8750,
+      "Distributions": 1500
     }
   }
 }

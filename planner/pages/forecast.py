@@ -38,12 +38,19 @@ def layout():
                 dbc.Col(
                     html.Div(
                         [
-                            html.H4("Forecast Settings", className="mb-3"),
+                            html.H4(
+                                [html.I(className="bi bi-graph-up-arrow me-2 text-info"), "Forecast Settings"],
+                                className="mb-3"
+                            ),
                             dbc.Row(
                                 [
                                     dbc.Col(
                                         [
-                                            html.Label("Forecast Horizon"),
+                                            html.Label(
+                                                [html.I(className="bi bi-calendar-range me-1 text-muted"), "Forecast Horizon"],
+                                                id="label-forecast-horizon",
+                                                className="form-label",
+                                            ),
                                             dcc.Dropdown(
                                                 id="forecast-horizon-dropdown",
                                                 options=[
@@ -56,17 +63,24 @@ def layout():
                                                 clearable=False,
                                                 style={"color": "#0f172a"},
                                             ),
+                                            dbc.Tooltip(
+                                                "Choose how many quarters to project forward. Projections grow from your current business profile using your quarterly growth rate assumption.",
+                                                target="label-forecast-horizon",
+                                            ),
                                         ],
-                                        width=6,
+                                        md=5,
                                     ),
                                     dbc.Col(
                                         html.P(
-                                            "Future quarters are projected from historical data. "
-                                            "Edit cells to override individual quarter assumptions.",
-                                            className="text-muted mb-0",
+                                            [
+                                                html.I(className="bi bi-info-circle me-1"),
+                                                "Future quarters are projected from your current business profile. "
+                                                "Edit any cell to override individual quarter assumptions.",
+                                            ],
+                                            className="text-muted mb-0 mt-md-4",
                                             style={"fontSize": "0.85rem"},
                                         ),
-                                        width=6,
+                                        md=7,
                                     ),
                                 ]
                             ),

@@ -13,7 +13,6 @@ from planner.data_manager import save_project_state
 
 dash.register_page(__name__, path="/valuation", title="Valuation")
 
-
 def layout():
     return dbc.Container(
         [
@@ -24,27 +23,98 @@ def layout():
                         html.Div(
                             [
                                 html.H4("Valuation Multiples Settings", className="mb-4"),
-                                html.Label("Revenue Multiple"),
-                                dbc.Input(id={"type": "valuation-input", "field": "revenue_mult"},
-                                          type="number", step=0.1, value=2.5, className="mb-3"),
-                                html.Label("EBITDA Multiple"),
-                                dbc.Input(id={"type": "valuation-input", "field": "ebitda_mult"},
-                                          type="number", step=0.1, value=6.0, className="mb-3"),
-                                html.Label("Net Income Multiple"),
-                                dbc.Input(id={"type": "valuation-input", "field": "net_income_mult"},
-                                          type="number", step=0.1, value=8.0, className="mb-3"),
-                                html.Label("SDE Multiple"),
-                                dbc.Input(id={"type": "valuation-input", "field": "sde_mult"},
-                                          type="number", step=0.1, value=4.5, className="mb-3"),
-                                html.Label("FCF Multiple"),
-                                dbc.Input(id={"type": "valuation-input", "field": "fcf_mult"},
-                                          type="number", step=0.1, value=7.0, className="mb-3"),
-                                html.Label("Custom Method Name"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Revenue Multiple"],
+                                    id="label-rev-mult"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.Input(id={"type": "valuation-input", "field": "revenue_mult"},
+                                                  type="number", step=0.1, value=2.5),
+                                        dbc.InputGroupText("x"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Gross revenue multiplier, typically used for SaaS/fast-growing firms (1x - 5x).", target="label-rev-mult"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "EBITDA Multiple"],
+                                    id="label-ebitda-mult"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.Input(id={"type": "valuation-input", "field": "ebitda_mult"},
+                                                  type="number", step=0.1, value=6.0),
+                                        dbc.InputGroupText("x"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("EBITDA multiplier, the standard baseline for mid-market business valuation (4x - 8x).", target="label-ebitda-mult"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Net Income Multiple"],
+                                    id="label-ni-mult"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.Input(id={"type": "valuation-input", "field": "net_income_mult"},
+                                                  type="number", step=0.1, value=8.0),
+                                        dbc.InputGroupText("x"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Net Income multiplier, accounts for all taxes and debt payments (6x - 12x).", target="label-ni-mult"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "SDE Multiple"],
+                                    id="label-sde-mult"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.Input(id={"type": "valuation-input", "field": "sde_mult"},
+                                                  type="number", step=0.1, value=4.5),
+                                        dbc.InputGroupText("x"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Seller's Discretionary Earnings (SDE = EBITDA + Owner Salary). Standard for small firms (2x - 5x).", target="label-sde-mult"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "FCF Multiple"],
+                                    id="label-fcf-mult"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.Input(id={"type": "valuation-input", "field": "fcf_mult"},
+                                                  type="number", step=0.1, value=7.0),
+                                        dbc.InputGroupText("x"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Free Cash Flow multiplier (EBITDA - CapEx - Taxes). Reflects actual cash yield (5x - 10x).", target="label-fcf-mult"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Custom Method Name"],
+                                    id="label-custom-name"
+                                ),
                                 dbc.Input(id={"type": "valuation-input", "field": "custom_name"},
                                           type="text", value="Custom Multiplier", className="mb-3"),
-                                html.Label("Custom Multiplier"),
-                                dbc.Input(id={"type": "valuation-input", "field": "custom_mult"},
-                                          type="number", step=0.1, value=3.0, className="mb-3"),
+                                dbc.Tooltip("Label for your custom valuation methodology.", target="label-custom-name"),
+                                
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Custom Multiplier"],
+                                    id="label-custom-mult"
+                                ),
+                                dbc.InputGroup(
+                                    [
+                                        dbc.Input(id={"type": "valuation-input", "field": "custom_mult"},
+                                                  type="number", step=0.1, value=3.0),
+                                        dbc.InputGroupText("x"),
+                                    ],
+                                    className="mb-3"
+                                ),
+                                dbc.Tooltip("Multiplier to apply to annual EBITDA for the custom valuation.", target="label-custom-mult"),
                             ],
                             className="glass-card mb-4",
                         ),
@@ -214,10 +284,18 @@ def persist_valuation_edits(val_vals, val_ids, current_state, active_scenario):
             continue
         field = vid["field"]
         if field in mult_map:
+            try:
+                val = max(0.0, min(50.0, float(val or 0.0)))
+            except ValueError:
+                val = 0.0
             new_state["assumptions"]["valuation_multiples"][mult_map[field]] = val
         elif field == "custom_name":
-            new_state["assumptions"]["custom_valuation_name"] = val
+            new_state["assumptions"]["custom_valuation_name"] = str(val)
         elif field == "custom_mult":
+            try:
+                val = max(0.0, min(50.0, float(val or 0.0)))
+            except ValueError:
+                val = 0.0
             new_state["assumptions"]["custom_valuation_multiplier"] = val
 
     try:

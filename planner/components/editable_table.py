@@ -23,8 +23,13 @@ def render_editable_table(
             "type": col_type
         }
         if col_type == "numeric":
-            c["format"] = {"specifier": "$,.2f"}
+            # Growth rate, interest rate, tax rate, etc. should be percentage
+            if "rate" in col["id"] or "growth" in col["id"] or "pct" in col["id"]:
+                c["format"] = {"specifier": ".1%"}
+            else:
+                c["format"] = {"specifier": "$,.0f"}
         columns.append(c)
+
         
     table = dash_table.DataTable(
         id=table_id,
@@ -33,14 +38,20 @@ def render_editable_table(
         editable=True,
         row_deletable=True,
         style_as_list_view=True,
+        style_table={
+            "overflowX": "auto",
+            "minWidth": "100%",
+        },
         style_cell={
             "backgroundColor": "#1e293b",
             "color": "#f8fafc",
             "border": "1px solid rgba(255, 255, 255, 0.08)",
-            "padding": "12px 16px",
+            "padding": "10px 14px",
             "fontFamily": "Inter, sans-serif",
-            "fontSize": "0.9rem",
-            "textAlign": "left"
+            "fontSize": "0.85rem",
+            "textAlign": "left",
+            "whiteSpace": "normal",
+            "height": "auto",
         },
         style_header={
             "backgroundColor": "#0b0f19",
@@ -50,7 +61,7 @@ def render_editable_table(
             "textTransform": "uppercase",
             "fontSize": "0.75rem",
             "letterSpacing": "0.05em",
-            "padding": "12px 16px"
+            "padding": "12px 14px"
         },
         style_data_conditional=[
             {

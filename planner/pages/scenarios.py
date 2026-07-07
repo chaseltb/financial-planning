@@ -23,8 +23,19 @@ def layout():
                     dbc.Col(
                         html.Div(
                             [
-                                html.H4("Scenarios Ledger", className="mb-4"),
-                                html.Label("Select Scenario to Compare"),
+                                html.H4(
+                                    [html.I(className="bi bi-layers me-2 text-info"), "Scenarios Ledger"],
+                                    className="mb-4"
+                                ),
+                                html.Label(
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Select Scenario to Compare"],
+                                    id="label-scenarios-compare",
+                                    className="form-label",
+                                ),
+                                dbc.Tooltip(
+                                    "Pick any scenario to compare its key metrics against the Baseline.",
+                                    target="label-scenarios-compare",
+                                ),
                                 dcc.Dropdown(
                                     id="scenarios-list-dropdown",
                                     options=[{"label": "Baseline", "value": "Baseline"}],
@@ -33,7 +44,15 @@ def layout():
                                     className="mb-3",
                                     style={"color": "#0f172a"},
                                 ),
-                                html.Label("Scenario Name for Operation"),
+                                html.Label(
+                                    [html.I(className="bi bi-pencil-square me-1 text-muted"), "Scenario Name for Operation"],
+                                    id="label-scenarios-name",
+                                    className="form-label",
+                                ),
+                                dbc.Tooltip(
+                                    "Enter a name to use when creating, duplicating, or renaming a scenario.",
+                                    target="label-scenarios-name",
+                                ),
                                 dbc.Input(
                                     id="scenarios-action-input",
                                     type="text",
@@ -42,12 +61,24 @@ def layout():
                                 ),
                                 html.Div(
                                     [
-                                        dbc.Button("Create New",       id="scenarios-create-btn",    color="primary",   className="me-2 mb-2"),
-                                        dbc.Button("Duplicate Active", id="scenarios-duplicate-btn", color="secondary", className="me-2 mb-2"),
-                                        dbc.Button("Rename Active",    id="scenarios-rename-btn",    color="secondary", className="me-2 mb-2"),
-                                        dbc.Button("Delete Active",    id="scenarios-delete-btn",    color="danger",    className="me-2 mb-2"),
+                                        dbc.Button(
+                                            [html.I(className="bi bi-plus-circle me-1"), "Create New"],
+                                            id="scenarios-create-btn", color="primary", className="me-2 mb-2",
+                                        ),
+                                        dbc.Button(
+                                            [html.I(className="bi bi-copy me-1"), "Duplicate Active"],
+                                            id="scenarios-duplicate-btn", color="secondary", className="me-2 mb-2",
+                                        ),
+                                        dbc.Button(
+                                            [html.I(className="bi bi-pencil me-1"), "Rename Active"],
+                                            id="scenarios-rename-btn", color="secondary", className="me-2 mb-2",
+                                        ),
+                                        dbc.Button(
+                                            [html.I(className="bi bi-trash3 me-1"), "Delete Active"],
+                                            id="scenarios-delete-btn", color="danger", className="me-2 mb-2",
+                                        ),
                                     ],
-                                    className="d-flex flex-wrap",
+                                    className="d-flex flex-wrap gap-1",
                                 ),
                             ],
                             className="glass-card mb-4",
@@ -57,8 +88,11 @@ def layout():
                     dbc.Col(
                         html.Div(
                             [
-                                html.H4("Scenario Performance Comparison", className="mb-3"),
-                                html.Div(id="scenarios-comparison-table-container", className="mb-4"),
+                                html.H4(
+                                    [html.I(className="bi bi-bar-chart-line me-2 text-info"), "Scenario Performance Comparison"],
+                                    className="mb-3"
+                                ),
+                                html.Div(id="scenarios-comparison-table-container", className="mb-4 table-responsive"),
                                 dcc.Graph(id="scenarios-comparison-chart"),
                             ],
                             className="glass-card mb-4",
@@ -70,6 +104,7 @@ def layout():
         ],
         fluid=True,
     )
+
 
 
 @callback(
