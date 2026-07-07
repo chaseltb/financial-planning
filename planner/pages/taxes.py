@@ -132,28 +132,55 @@ def populate_taxes_page(state):
     combined = r["combined_tax"]
     effective = r["effective_rate"]
 
-    # Bracket visualizer
+    # Bracket visualizer — show how far taxable ordinary income has filled each
+    # bracket: 0% if not yet reached, a partial fill for the bracket currently
+    # being taxed, and 100% for brackets fully passed through.
     rules = r["fed_rules"]
-    brackets = rules.get("brackets", {}).get(filing, [])
+    brackets = sorted(rules.get("brackets", {}).get(filing, []), key=lambda x: x["threshold"])
     taxable = fed.get("taxable_income", 0.0)
 
     bar_elements = []
-    for br in sorted(brackets, key=lambda x: x["threshold"]):
-        filled = taxable > br["threshold"]
+    for i, br in enumerate(brackets):
+        lower = br["threshold"]
+        upper = brackets[i + 1]["threshold"] if i + 1 < len(brackets) else None
+
+        if taxable <= lower:
+            pct = 0.0
+            amount_in_bracket = 0.0
+        elif upper is None:
+            # Top, open-ended bracket — no ceiling to measure "how far into it".
+            pct = 100.0
+            amount_in_bracket = taxable - lower
+        elif taxable >= upper:
+            pct = 100.0
+            amount_in_bracket = upper - lower
+        else:
+            amount_in_bracket = taxable - lower
+            pct = (amount_in_bracket / (upper - lower)) * 100.0
+
+        is_current = 0.0 < pct < 100.0
+        color = "secondary" if pct == 0 else ("info" if is_current else "success")
+
+        range_label = f"${lower:,.0f} – ${upper:,.0f}" if upper is not None else f"${lower:,.0f}+"
+        detail = (
+            f"${amount_in_bracket:,.0f} of ${(upper - lower):,.0f} used" if upper is not None and pct > 0
+            else (f"${amount_in_bracket:,.0f} in this bracket" if pct > 0 else f"Threshold: ${lower:,.0f}")
+        )
+
         bar_elements.append(html.Div([
             html.Div(
                 [
-                    html.Span(f"{br['rate']*100:.0f}% bracket",
+                    html.Span(f"{br['rate']*100:.0f}% bracket ({range_label})",
                               style={"fontSize": "0.85rem", "fontWeight": "600"}),
-                    html.Span(f"Threshold: ${br['threshold']:,.0f}",
+                    html.Span(detail,
                               className="text-muted ms-auto",
                               style={"fontSize": "0.8rem"}),
                 ],
                 style={"display": "flex"},
             ),
             dbc.Progress(
-                value=100 if filled else 0,
-                color="info" if filled else "secondary",
+                value=pct,
+                color=color,
                 style={"height": "8px", "margin": "6px 0 12px 0"},
             ),
         ]))

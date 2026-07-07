@@ -52,30 +52,39 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "business-input", "field": "owner_salary"},
-                                            type="number", min=0, step=1000, value=0
+                                            type="number", debounce=True, min=0, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
                                     className="mb-3"
                                 ),
-                                dbc.Tooltip("Annual W-2 wages paid to the owner. S-Corps require a 'reasonable W-2 salary' under IRS rules.", target="label-owner-salary"),
+                                dbc.Tooltip(
+                                    id="tooltip-owner-salary",
+                                    children="Annual W-2 wages paid to the owner. S-Corps require a 'reasonable W-2 salary' under IRS rules.",
+                                    target="label-owner-salary",
+                                ),
                                 
                                 html.Label(
-                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Owner Profit Distributions"],
-                                    id="label-distributions"
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Your Ownership %"],
+                                    id="label-ownership-pct"
                                 ),
                                 dbc.InputGroup(
                                     [
-                                        dbc.InputGroupText("$"),
                                         dbc.Input(
-                                            id={"type": "business-input", "field": "distributions"},
-                                            type="number", min=0, step=1000, value=0
+                                            id={"type": "business-input", "field": "ownership_pct"},
+                                            type="number", debounce=True, min=1, max=100, step=1, value=100
                                         ),
-                                        dbc.InputGroupText("/yr"),
+                                        dbc.InputGroupText("%"),
                                     ],
                                     className="mb-3"
                                 ),
-                                dbc.Tooltip("Annual dividends or cash distributions to the owner, not subject to self-employment tax.", target="label-distributions"),
+                                dbc.Tooltip(
+                                    "Your stake in the business. Owner profit distributions are calculated automatically "
+                                    "as this % of net income after owner salary — not entered manually. If you own less "
+                                    "than 100%, only your pro-rata share of K-1/dividend income and self-employment tax "
+                                    "applies to your personal return; the rest belongs to other partners/shareholders.",
+                                    target="label-ownership-pct",
+                                ),
                                 
                                 html.Label(
                                     [html.I(className="bi bi-info-circle me-1 text-muted"), "Quarterly Revenue Growth"],
@@ -85,7 +94,7 @@ def layout():
                                     [
                                         dbc.Input(
                                             id={"type": "business-input", "field": "revenue_growth"},
-                                            type="number", step=0.01, value=0.05
+                                            type="number", debounce=True, step=0.0001, value=0.05
                                         ),
                                         dbc.InputGroupText("% / quarter"),
                                     ],
@@ -101,7 +110,7 @@ def layout():
                                     [
                                         dbc.Input(
                                             id={"type": "business-input", "field": "expense_growth"},
-                                            type="number", step=0.01, value=0.03
+                                            type="number", debounce=True, step=0.0001, value=0.03
                                         ),
                                         dbc.InputGroupText("% / quarter"),
                                     ],
@@ -124,7 +133,7 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "business-financials-input", "field": "revenue"},
-                                            type="number", min=0, step=1000, value=0
+                                            type="number", debounce=True, min=0, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
@@ -141,7 +150,7 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "business-financials-input", "field": "cogs"},
-                                            type="number", min=0, step=1000, value=0
+                                            type="number", debounce=True, min=0, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
@@ -158,7 +167,7 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "business-financials-input", "field": "payroll"},
-                                            type="number", min=0, step=1000, value=0
+                                            type="number", debounce=True, min=0, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
@@ -175,7 +184,7 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "business-financials-input", "field": "expenses"},
-                                            type="number", min=0, step=1000, value=0
+                                            type="number", debounce=True, min=0, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
@@ -192,7 +201,7 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "business-financials-input", "field": "capex"},
-                                            type="number", min=0, step=1000, value=0
+                                            type="number", debounce=True, min=0, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
@@ -215,14 +224,24 @@ def layout():
                                     ),
                                     dbc.Row(
                                         [
-                                            dbc.Col([html.Div("EBITDA", className="text-muted", style={"fontSize": "0.85rem"}),
+                                            dbc.Col([html.Div("EBITDA (Current Quarter, Annualized)", className="text-muted", style={"fontSize": "0.85rem"}),
                                                      html.H3(id="biz-ebitda-val", style={"color": "var(--accent-emerald)", "fontWeight": "bold"})], width=4),
-                                            dbc.Col([html.Div("Net Income", className="text-muted", style={"fontSize": "0.85rem"}),
+                                            dbc.Col([html.Div("Net Income (After Owner Salary)", className="text-muted", style={"fontSize": "0.85rem"}),
                                                      html.H3(id="biz-netincome-val", style={"color": "var(--accent-blue)", "fontWeight": "bold"})], width=4),
                                             dbc.Col([html.Div("Operating Margin", className="text-muted", style={"fontSize": "0.85rem"}),
                                                      html.H3(id="biz-margin-val", style={"fontWeight": "bold"})], width=4),
                                         ],
                                         className="mb-4",
+                                    ),
+                                    dbc.Row(
+                                        [
+                                            dbc.Col([html.Div("Owner Distributions (Your Share)", className="text-muted", style={"fontSize": "0.85rem"}),
+                                                     html.H3(id="biz-distributions-val", style={"fontWeight": "bold"})], width=4),
+                                            dbc.Col([html.Div("Employer Payroll Tax (FICA Match)", className="text-muted", style={"fontSize": "0.85rem"}),
+                                                     html.H3(id="biz-employer-payroll-val", style={"color": "var(--accent-purple)", "fontWeight": "bold"})], width=4),
+                                            dbc.Col([html.Div("Est. Combined Tax Burden (Fed + NC)", className="text-muted", style={"fontSize": "0.85rem"}),
+                                                     html.H3(id="biz-combined-tax-val", style={"fontWeight": "bold"})], width=4),
+                                        ],
                                     ),
                                 ],
                                 className="glass-card mb-4",
@@ -247,38 +266,59 @@ def layout():
     )
 
 
+_OWNER_SALARY_TOOLTIPS = {
+    "S Corporation": "Annual W-2 wages paid to the owner through payroll. S-Corps require a 'reasonable W-2 salary' under IRS rules — the remaining profit passes through as K-1 distributions, free of self-employment tax.",
+    "C Corporation": "Annual W-2 wages paid to the owner through payroll. Reduces C-Corp taxable income; the business also pays the employer-side FICA match on this amount.",
+    "Sole Proprietorship": "Not applicable for a Sole Proprietorship — you can't legally pay yourself W-2 wages. The full business profit is subject to self-employment tax regardless of this field; it is ignored in calculations.",
+    "Single-member LLC": "Not applicable for a Single-member LLC (taxed like a Sole Proprietorship) — you can't legally pay yourself W-2 wages. The full business profit is subject to self-employment tax; this field is ignored in calculations.",
+    "Multi-member LLC": "Not applicable for a Multi-member LLC (taxed as a partnership) — partners can't be paid W-2 wages by the partnership. The full K-1 profit is subject to self-employment tax; this field is ignored in calculations.",
+}
+
+
 @callback(
     Output({"type": "business-input", "field": "entity_type"},    "value"),
     Output({"type": "business-input", "field": "owner_salary"},   "value"),
-    Output({"type": "business-input", "field": "distributions"},  "value"),
+    Output({"type": "business-input", "field": "ownership_pct"},  "value"),
     Output({"type": "business-input", "field": "revenue_growth"}, "value"),
     Output({"type": "business-input", "field": "expense_growth"}, "value"),
+    Output("tooltip-owner-salary", "children"),
     Output("biz-ebitda-val",    "children"),
     Output("biz-netincome-val", "children"),
     Output("biz-margin-val",    "children"),
+    Output("biz-distributions-val",    "children"),
+    Output("biz-employer-payroll-val", "children"),
+    Output("biz-combined-tax-val",     "children"),
     Output("business-forecast-trend-chart", "figure"),
     Input("project-state-store", "data"),
     prevent_initial_call=False,
 )
 def populate_business_page(state):
     if state is None:
-        return [no_update] * 9
+        return [no_update] * 12
 
     r = run_all_engines(state)
     b = state.get("business", {})
+    entity_type = b.get("entity_type", "Sole Proprietorship")
+    ownership_pct = max(0.0, min(1.0, float(b.get("ownership_pct", 100.0)) / 100.0))
     annual_ebitda = r["ebitda_q"] * 4.0
     annual_ni = r["annual_net_biz_income"]
     margin = (r["ebitda_q"] / r["revenue_q"] * 100) if r["revenue_q"] > 0 else 0.0
+    employer_payroll_tax = r["fed_tax"].get("employer_payroll_tax", 0.0)
+    owner_distributions = max(0.0, annual_ni) * ownership_pct
 
     return (
-        b.get("entity_type", "Sole Proprietorship"),
+        entity_type,
         b.get("owner_salary", 0),
-        b.get("distributions", 0),
+        b.get("ownership_pct", 100),
         b.get("revenue_growth", 0.05),
         b.get("expense_growth", 0.03),
+        _OWNER_SALARY_TOOLTIPS.get(entity_type, _OWNER_SALARY_TOOLTIPS["Sole Proprietorship"]),
         f"${annual_ebitda:,.0f}",
         f"${annual_ni:,.0f}",
         f"{margin:.1f}%",
+        f"${owner_distributions:,.0f}",
+        f"${employer_payroll_tax:,.0f}",
+        f"${r['combined_tax']:,.0f}",
         create_business_trend(r["forecast_df"]),
     )
 
@@ -307,11 +347,16 @@ def persist_business_edits(biz_vals, biz_ids, current_state, active_scenario):
     for bid, val in zip(biz_ids, biz_vals):
         if val is not None:
             field = bid["field"]
-            if field in ["owner_salary", "distributions"]:
+            if field == "owner_salary":
                 try:
                     val = max(0.0, float(val or 0.0))
                 except ValueError:
                     val = 0.0
+            elif field == "ownership_pct":
+                try:
+                    val = max(1.0, min(100.0, float(val or 100.0)))
+                except ValueError:
+                    val = 100.0
             elif field in ["revenue_growth", "expense_growth"]:
                 try:
                     val = max(-1.0, min(5.0, float(val or 0.0)))
