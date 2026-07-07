@@ -7,6 +7,7 @@ import dash_bootstrap_components as dbc
 
 from planner.components.charts import create_business_trend
 from planner.engines.runner import run_all_engines
+from planner.engines.forecast import DEFAULT_SEED
 from planner.data_manager import save_project_state
 
 dash.register_page(__name__, path="/business", title="Business Planning")
@@ -36,7 +37,7 @@ def layout():
                                     className="mb-3",
                                     style={"color": "#0f172a"},
                                 ),
-                                html.Label("Owner W-2 Salary ($/yr)"),
+                                html.Label("W-2 Owner's Salary (from Business, $/yr)"),
                                 dbc.Input(id={"type": "business-input", "field": "owner_salary"},
                                           type="number", value=0, className="mb-3"),
                                 html.Label("Owner Profit Distributions ($/yr)"),
@@ -48,6 +49,27 @@ def layout():
                                 html.Label("Quarterly Expense Growth"),
                                 dbc.Input(id={"type": "business-input", "field": "expense_growth"},
                                           type="number", step=0.01, value=0.03, className="mb-3"),
+                            ],
+                            className="glass-card mb-4",
+                        ),
+                        html.Div(
+                            [
+                                html.H4("Business Revenue & Expenses (Annual Run-Rate)", className="mb-4"),
+                                html.Label("Annual Revenue ($/yr)"),
+                                dbc.Input(id={"type": "business-financials-input", "field": "revenue"},
+                                          type="number", value=0, className="mb-3"),
+                                html.Label("Annual COGS ($/yr)"),
+                                dbc.Input(id={"type": "business-financials-input", "field": "cogs"},
+                                          type="number", value=0, className="mb-3"),
+                                html.Label("Annual Payroll — Non-Owner Staff ($/yr)"),
+                                dbc.Input(id={"type": "business-financials-input", "field": "payroll"},
+                                          type="number", value=0, className="mb-3"),
+                                html.Label("Annual Operating Expenses ($/yr)"),
+                                dbc.Input(id={"type": "business-financials-input", "field": "expenses"},
+                                          type="number", value=0, className="mb-3"),
+                                html.Label("Annual Capital Expenditures ($/yr)"),
+                                dbc.Input(id={"type": "business-financials-input", "field": "capex"},
+                                          type="number", value=0, className="mb-3"),
                             ],
                             className="glass-card mb-4",
                         ),
@@ -147,6 +169,96 @@ def persist_business_edits(biz_vals, biz_ids, current_state, active_scenario):
     for bid, val in zip(biz_ids, biz_vals):
         if val is not None:
             new_state["business"][bid["field"]] = val
+
+    try:
+        save_project_state(new_state, active_scenario)
+        label = "● Saved"
+    except Exception as e:
+        label = f"⚠ {e}"
+
+    return new_state, label
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Populate this page's revenue/expense inputs from the latest
+#           historical forecast quarter (annualized)
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output({"type": "business-financials-input", "field": "revenue"},  "value"),
+    Output({"type": "business-financials-input", "field": "cogs"},     "value"),
+    Output({"type": "business-financials-input", "field": "payroll"},  "value"),
+    Output({"type": "business-financials-input", "field": "expenses"}, "value"),
+    Output({"type": "business-financials-input", "field": "capex"},    "value"),
+    Input("project-state-store", "data"),
+    prevent_initial_call=False,
+)
+def populate_business_financials(state):
+    if state is None:
+        return [no_update] * 5
+
+    forecast = state.get("forecast", [])
+    last = forecast[-1] if forecast else DEFAULT_SEED
+
+    return (
+        float(last.get("Revenue", 0) or 0) * 4,
+        float(last.get("COGS", 0) or 0) * 4,
+        float(last.get("Payroll", 0) or 0) * 4,
+        float(last.get("Expenses", 0) or 0) * 4,
+        float(last.get("Capital expenditures", 0) or 0) * 4,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Persist edits from this page's revenue/expense inputs into the
+#           latest historical forecast quarter
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("project-state-store", "data", allow_duplicate=True),
+    Output("save-status-indicator", "children", allow_duplicate=True),
+    Input({"type": "business-financials-input", "field": ALL}, "value"),
+    State({"type": "business-financials-input", "field": ALL}, "id"),
+    State("project-state-store", "data"),
+    State("active-scenario-store", "data"),
+    prevent_initial_call=True,
+)
+def persist_business_financials(vals, ids, current_state, active_scenario):
+    if current_state is None:
+        return no_update, no_update
+
+    ctx = callback_context
+    if not ctx.triggered:
+        return no_update, no_update
+
+    field_map = {fid["field"]: val for fid, val in zip(ids, vals) if val is not None}
+    if not field_map:
+        return no_update, no_update
+
+    new_state = copy.deepcopy(current_state)
+    forecast = new_state.get("forecast", [])
+    if not forecast:
+        forecast = [dict(DEFAULT_SEED)]
+    last = dict(forecast[-1])
+
+    col_by_field = {
+        "revenue": "Revenue", "cogs": "COGS", "payroll": "Payroll",
+        "expenses": "Expenses", "capex": "Capital expenditures",
+    }
+    for field, col in col_by_field.items():
+        if field in field_map:
+            last[col] = float(field_map[field]) / 4.0
+
+    revenue = float(last.get("Revenue", 0) or 0)
+    cogs = float(last.get("COGS", 0) or 0)
+    payroll = float(last.get("Payroll", 0) or 0)
+    expenses = float(last.get("Expenses", 0) or 0)
+    ebitda = revenue - cogs - payroll - expenses
+    last["EBITDA"] = ebitda
+
+    ebitda_mult = float(new_state.get("assumptions", {}).get("valuation_multiples", {}).get("ebitda", 6.0))
+    last["Business value"] = max(0.0, ebitda * 4.0 * ebitda_mult)
+
+    forecast[-1] = last
+    new_state["forecast"] = forecast
 
     try:
         save_project_state(new_state, active_scenario)
