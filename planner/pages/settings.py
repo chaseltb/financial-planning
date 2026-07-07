@@ -1,6 +1,12 @@
+import base64
+import io
+import json
+
 import dash
-from dash import html, dcc
+from dash import html, dcc, callback, callback_context, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
+
+from planner.data_manager import save_project_state
 
 dash.register_page(__name__, path="/settings", title="Settings & Backup")
 
@@ -131,3 +137,84 @@ def layout():
         ],
         fluid=True
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Export (this page's export buttons)
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("settings-download-component", "data"),
+    Input("settings-export-json-btn", "n_clicks"),
+    Input("settings-export-excel-btn", "n_clicks"),
+    State("project-state-store", "data"),
+    State("active-scenario-store", "data"),
+    prevent_initial_call=True,
+)
+def export_data(json_c, excel_c, state, active_scenario):
+    ctx = callback_context
+    triggered = ctx.triggered[0]["prop_id"] if ctx.triggered else ""
+
+    if "json" in triggered and state:
+        return dcc.send_string(
+            json.dumps(state, indent=2),
+            filename=f"finance_planner_{active_scenario}.json",
+        )
+
+    if "excel" in triggered and state:
+        import openpyxl
+        wb = openpyxl.Workbook()
+        wb.remove(wb.active)
+
+        def add_sheet(title, data):
+            if not data:
+                return
+            ws = wb.create_sheet(title)
+            ws.append(list(data[0].keys()))
+            for item in data:
+                ws.append(list(item.values()))
+
+        ws = wb.create_sheet("Profile")
+        for k, v in state["profile"].items():
+            ws.append([k, v])
+
+        add_sheet("Income", state["income"])
+        add_sheet("Expenses", state["expenses"])
+        add_sheet("Assets", state["assets"])
+        add_sheet("Liabilities", state["liabilities"])
+        add_sheet("Forecast History", state["forecast"])
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return dcc.send_bytes(buf.read(), filename=f"financial_model_{active_scenario}.xlsx")
+
+    return no_update
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Import (this page's upload control)
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("settings-import-status", "children"),
+    Output("project-state-store", "data", allow_duplicate=True),
+    Input("settings-import-upload", "contents"),
+    State("settings-import-upload", "filename"),
+    State("active-scenario-store", "data"),
+    prevent_initial_call=True,
+)
+def import_data(contents, filename, active_scenario):
+    if contents is None:
+        return no_update, no_update
+    _, content_string = contents.split(",")
+    decoded = base64.b64decode(content_string)
+    try:
+        if not (filename or "").endswith(".json"):
+            return html.Div("Only .json files are supported.", style={"color": "#ef4444"}), no_update
+        imported = json.loads(decoded.decode("utf-8"))
+        for req in ["profile", "business", "assets", "liabilities", "income", "expenses"]:
+            if req not in imported:
+                return html.Div(f"Missing section: '{req}'", style={"color": "#ef4444"}), no_update
+        save_project_state(imported, active_scenario)
+        return html.Div("✓ Import successful!", style={"color": "#10b981"}), imported
+    except Exception as e:
+        return html.Div(f"Error: {e}", style={"color": "#ef4444"}), no_update

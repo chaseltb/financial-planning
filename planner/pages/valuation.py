@@ -1,12 +1,15 @@
 """Business Valuation page — 6-method valuations with sensitivity chart."""
+import copy
+
 import dash
-from dash import html, dcc, callback, Input, Output, no_update
+from dash import html, dcc, callback, callback_context, Input, Output, State, ALL, no_update
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
 from planner.components.cards import render_metric_card
 from planner.components.charts import create_sensitivity_chart, apply_dark_layout
 from planner.engines.runner import run_all_engines
+from planner.data_manager import save_project_state
 
 dash.register_page(__name__, path="/valuation", title="Valuation")
 
@@ -179,3 +182,69 @@ def populate_valuation_page(state, stored_method, stored_range, dropdown_method,
         custom["name"],
         custom["multiplier"],
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Persist edits from this page's valuation inputs
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("project-state-store", "data", allow_duplicate=True),
+    Output("save-status-indicator", "children", allow_duplicate=True),
+    Input({"type": "valuation-input", "field": ALL}, "value"),
+    State({"type": "valuation-input", "field": ALL}, "id"),
+    State("project-state-store", "data"),
+    State("active-scenario-store", "data"),
+    prevent_initial_call=True,
+)
+def persist_valuation_edits(val_vals, val_ids, current_state, active_scenario):
+    if current_state is None:
+        return no_update, no_update
+
+    ctx = callback_context
+    if not ctx.triggered:
+        return no_update, no_update
+
+    mult_map = {
+        "revenue_mult": "revenue", "ebitda_mult": "ebitda",
+        "net_income_mult": "net_income", "sde_mult": "sde", "fcf_mult": "fcf",
+    }
+    new_state = copy.deepcopy(current_state)
+    for vid, val in zip(val_ids, val_vals):
+        if val is None:
+            continue
+        field = vid["field"]
+        if field in mult_map:
+            new_state["assumptions"]["valuation_multiples"][mult_map[field]] = val
+        elif field == "custom_name":
+            new_state["assumptions"]["custom_valuation_name"] = val
+        elif field == "custom_mult":
+            new_state["assumptions"]["custom_valuation_multiplier"] = val
+
+    try:
+        save_project_state(new_state, active_scenario)
+        label = "● Saved"
+    except Exception as e:
+        label = f"⚠ {e}"
+
+    return new_state, label
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Sensitivity method/range inputs → stores (page-local controls)
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("sensitivity-method-store", "data"),
+    Input("valuation-sensitivity-method", "value"),
+    prevent_initial_call=True,
+)
+def update_sens_method(val):
+    return val or "EBITDA Multiple"
+
+
+@callback(
+    Output("sensitivity-range-store", "data"),
+    Input("valuation-sensitivity-range", "value"),
+    prevent_initial_call=True,
+)
+def update_sens_range(val):
+    return val or 0.20

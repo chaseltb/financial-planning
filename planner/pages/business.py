@@ -1,10 +1,13 @@
 """Business Planning page."""
+import copy
+
 import dash
-from dash import html, dcc, callback, Input, Output, no_update
+from dash import html, dcc, callback, callback_context, Input, Output, State, ALL, no_update
 import dash_bootstrap_components as dbc
 
 from planner.components.charts import create_business_trend
 from planner.engines.runner import run_all_engines
+from planner.data_manager import save_project_state
 
 dash.register_page(__name__, path="/business", title="Business Planning")
 
@@ -118,3 +121,37 @@ def populate_business_page(state):
         f"{margin:.1f}%",
         create_business_trend(r["forecast_df"]),
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Persist edits from this page's business inputs
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("project-state-store", "data", allow_duplicate=True),
+    Output("save-status-indicator", "children", allow_duplicate=True),
+    Input({"type": "business-input", "field": ALL}, "value"),
+    State({"type": "business-input", "field": ALL}, "id"),
+    State("project-state-store", "data"),
+    State("active-scenario-store", "data"),
+    prevent_initial_call=True,
+)
+def persist_business_edits(biz_vals, biz_ids, current_state, active_scenario):
+    if current_state is None:
+        return no_update, no_update
+
+    ctx = callback_context
+    if not ctx.triggered:
+        return no_update, no_update
+
+    new_state = copy.deepcopy(current_state)
+    for bid, val in zip(biz_ids, biz_vals):
+        if val is not None:
+            new_state["business"][bid["field"]] = val
+
+    try:
+        save_project_state(new_state, active_scenario)
+        label = "● Saved"
+    except Exception as e:
+        label = f"⚠ {e}"
+
+    return new_state, label

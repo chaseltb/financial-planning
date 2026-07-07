@@ -1,10 +1,13 @@
 """Personal Finances page — editable income/expense/asset/liability tables."""
+import copy
+
 import dash
-from dash import html, dcc, callback, Input, Output, no_update
+from dash import html, dcc, callback, callback_context, Input, Output, State, ALL, no_update
 import dash_bootstrap_components as dbc
 import pandas as pd
 
 from planner.components.editable_table import render_editable_table
+from planner.data_manager import save_project_state
 
 dash.register_page(__name__, path="/personal", title="Personal Finances")
 
@@ -142,3 +145,113 @@ def populate_personal_page(state):
         p.get("retirement_hsa",  0),
         p.get("solo_401k",       0),
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Persist edits from this page's profile inputs & tables
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("project-state-store", "data", allow_duplicate=True),
+    Output("save-status-indicator", "children", allow_duplicate=True),
+    Input({"type": "profile-input", "field": ALL}, "value"),
+    Input("income-table",      "data"),
+    Input("expenses-table",    "data"),
+    Input("assets-table",      "data"),
+    Input("liabilities-table", "data"),
+    State({"type": "profile-input", "field": ALL}, "id"),
+    State("project-state-store", "data"),
+    State("active-scenario-store", "data"),
+    prevent_initial_call=True,
+)
+def persist_personal_edits(
+    profile_vals, inc_data, exp_data, ast_data, liab_data,
+    profile_ids, current_state, active_scenario,
+):
+    if current_state is None:
+        return no_update, no_update
+
+    ctx = callback_context
+    triggered = ctx.triggered[0]["prop_id"] if ctx.triggered else ""
+    if not triggered:
+        return no_update, no_update
+
+    new_state = copy.deepcopy(current_state)
+
+    if "profile-input" in triggered:
+        for pid, val in zip(profile_ids, profile_vals):
+            if val is not None:
+                new_state["profile"][pid["field"]] = val
+    elif "income-table" in triggered and inc_data is not None:
+        new_state["income"] = inc_data
+    elif "expenses-table" in triggered and exp_data is not None:
+        new_state["expenses"] = exp_data
+    elif "assets-table" in triggered and ast_data is not None:
+        new_state["assets"] = ast_data
+    elif "liabilities-table" in triggered and liab_data is not None:
+        new_state["liabilities"] = liab_data
+    else:
+        return no_update, no_update
+
+    try:
+        save_project_state(new_state, active_scenario)
+        label = "● Saved"
+    except Exception as e:
+        label = f"⚠ {e}"
+
+    return new_state, label
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callbacks: Add rows to this page's editable tables
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("income-table", "data", allow_duplicate=True),
+    Input("income-table-add-btn", "n_clicks"),
+    State("income-table", "data"),
+    prevent_initial_call=True,
+)
+def add_income_row(n, rows):
+    rows = rows or []
+    if n:
+        rows.append({"id": f"inc_{len(rows)+1}", "category": "Other", "description": "New Source", "amount": 0.0})
+    return rows
+
+
+@callback(
+    Output("expenses-table", "data", allow_duplicate=True),
+    Input("expenses-table-add-btn", "n_clicks"),
+    State("expenses-table", "data"),
+    prevent_initial_call=True,
+)
+def add_expense_row(n, rows):
+    rows = rows or []
+    if n:
+        rows.append({"id": f"exp_{len(rows)+1}", "category": "Other", "description": "New Expense", "amount": 0.0})
+    return rows
+
+
+@callback(
+    Output("assets-table", "data", allow_duplicate=True),
+    Input("assets-table-add-btn", "n_clicks"),
+    State("assets-table", "data"),
+    prevent_initial_call=True,
+)
+def add_asset_row(n, rows):
+    rows = rows or []
+    if n:
+        rows.append({"id": f"ast_{len(rows)+1}", "category": "Other", "description": "New Asset", "value": 0.0, "growth_rate": 0.05})
+    return rows
+
+
+@callback(
+    Output("liabilities-table", "data", allow_duplicate=True),
+    Input("liabilities-table-add-btn", "n_clicks"),
+    State("liabilities-table", "data"),
+    prevent_initial_call=True,
+)
+def add_liability_row(n, rows):
+    rows = rows or []
+    if n:
+        rows.append({"id": f"liab_{len(rows)+1}", "category": "Other", "description": "New Liability",
+                     "value": 0.0, "interest_rate": 0.05, "monthly_payment": 0.0})
+    return rows

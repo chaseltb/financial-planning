@@ -1,13 +1,15 @@
 """Forecast Spreadsheet page."""
+import copy
+
 import dash
-from dash import html, dcc, callback, Input, Output, no_update
+from dash import html, dcc, callback, callback_context, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import pandas as pd
 
 from planner.components.charts import apply_dark_layout
 from planner.components.editable_table import render_editable_table
-from planner.data_manager import load_tax_rules
+from planner.data_manager import load_tax_rules, save_project_state
 from planner.config import DEFAULT_TAX_YEAR, DEFAULT_STATE
 from planner.engines.forecast import run_forecast, NUMERIC_COLS
 
@@ -164,3 +166,55 @@ def populate_forecast_page(state, horizon):
     fig_cash = apply_dark_layout(fig_cash, "Cash Balance and Quarterly Taxes")
 
     return spreadsheet, fig_op, fig_cash
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Forecast horizon dropdown → store (page-local control)
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("forecast-horizon-store", "data"),
+    Input("forecast-horizon-dropdown", "value"),
+    prevent_initial_call=True,
+)
+def update_horizon_store(val):
+    return val or 8
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Persist edits from this page's forecast spreadsheet
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("project-state-store", "data", allow_duplicate=True),
+    Output("save-status-indicator", "children", allow_duplicate=True),
+    Input("forecast-spreadsheet", "data"),
+    State("project-state-store", "data"),
+    State("active-scenario-store", "data"),
+    prevent_initial_call=True,
+)
+def persist_forecast_edits(forecast_data, current_state, active_scenario):
+    if current_state is None or forecast_data is None:
+        return no_update, no_update
+
+    ctx = callback_context
+    if not ctx.triggered:
+        return no_update, no_update
+
+    new_state = copy.deepcopy(current_state)
+    hist_rows = [r for r in forecast_data if "2025" in str(r.get("Quarter", ""))]
+    new_state["forecast"] = hist_rows
+    overrides = {}
+    for row in forecast_data:
+        q = str(row.get("Quarter", ""))
+        if "2025" not in q:
+            overrides[q] = {k: float(row.get(k, 0) or 0)
+                             for k in ["Revenue", "COGS", "Payroll", "Expenses",
+                                       "Capital expenditures", "Owner salary", "Distributions"]}
+    new_state["assumptions"]["forecast_overrides"] = overrides
+
+    try:
+        save_project_state(new_state, active_scenario)
+        label = "● Saved"
+    except Exception as e:
+        label = f"⚠ {e}"
+
+    return new_state, label
