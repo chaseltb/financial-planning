@@ -11,6 +11,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from planner.app import app
 
 if __name__ == "__main__":
-    print("Starting NC Financial Planning Platform...")
-    print("Open http://127.0.0.1:8050 in your browser.")
-    app.run(debug=True, port=8050)
+    app.run(debug=False, port=8050)
+
+

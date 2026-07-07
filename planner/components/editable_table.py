@@ -62,7 +62,7 @@ def render_editable_table(
         ],
         dropdown_conditional=[],
         persistence=True,
-        persisted_properties=["data"],
+        persisted_props=["data"],
         persistence_type="session"
     )
     
