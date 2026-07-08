@@ -1,5 +1,5 @@
 from typing import Dict, Any, List
-from planner.engines.tax.payroll import calculate_self_employment_tax
+from planner.engines.tax.payroll import calculate_self_employment_tax, calculate_payroll_tax
 
 def calculate_bracket_tax(taxable_ordinary: float, brackets: List[Dict[str, float]]) -> tuple[float, List[str]]:
     """
@@ -88,10 +88,24 @@ def calculate_federal_tax(
     business_entity: str,
     retirement_contributions: Dict[str, float],
     filing_status: str,
-    rules: Dict[str, Any]
+    rules: Dict[str, Any],
+    owner_w2_salary: float = 0.0,
+    ownership_pct: float = 1.0,
 ) -> Dict[str, Any]:
     """
     Calculates Federal Income Taxes for Personal and Business combined.
+
+    owner_w2_salary: Annual W-2 wages the BUSINESS itself pays the owner through
+    payroll (only meaningful for S-Corp/C-Corp — sole proprietors and LLC members
+    cannot legally pay themselves W-2 wages; they take an owner's draw instead, and
+    the full net profit remains subject to self-employment tax). Callers should pass
+    0.0 for Sole Proprietorship / Single-member LLC / Multi-member LLC.
+
+    business_net_income is the FULL company's net profit (100%), after owner salary.
+    ownership_pct (0.0-1.0) is this taxpayer's ownership stake — their personal K-1
+    share / SE tax base / distributions are business_net_income * ownership_pct.
+    Corporate-level tax (C-Corp) is entity-level and always computed on the full
+    100% figure regardless of ownership_pct.
     """
     # 1. Determine Personal Income by Category
     w2_personal = personal_income.get("W-2", 0.0)
@@ -101,7 +115,7 @@ def calculate_federal_tax(
     cap_gains = personal_income.get("Capital gains", 0.0)
     rental_income = personal_income.get("Rental income", 0.0)
     other_income = personal_income.get("Other", 0.0)
-    
+
     # 2. Add Business Flow-through Income based on entity type
     se_tax = 0.0
     se_deduction = 0.0
@@ -109,48 +123,72 @@ def calculate_federal_tax(
     corporate_tax = 0.0
     business_to_personal_w2 = 0.0
     business_to_personal_distributions = 0.0
-    
+
     entity = business_entity.strip()
-    
+
     business_steps = []
-    
+
+    # 2a. Employer-side payroll tax (FICA match) on the owner's W-2 wages.
+    # Only S-Corps/C-Corps actually run payroll for the owner; this is a real
+    # business expense that reduces the profit available for K-1/corporate tax.
+    employer_payroll_tax = 0.0
+    if owner_w2_salary > 0 and entity in ("S Corporation", "C Corporation"):
+        employer_payroll_calc = calculate_payroll_tax(owner_w2_salary, filing_status, rules)
+        # Employer matches Social Security + Medicare; there is no employer-side
+        # "Additional Medicare" — that surtax is employee-only.
+        employer_payroll_tax = employer_payroll_calc["social_security"] + employer_payroll_calc["medicare"]
+        business_net_income = business_net_income - employer_payroll_tax
+        business_steps.append(
+            f"Employer payroll tax match on owner W-2 wages (${owner_w2_salary:,.2f}): "
+            f"${employer_payroll_tax:,.2f} (deducted from business profit before K-1/corporate tax)."
+        )
+
+    # 2b. This taxpayer's pro-rata share of the FULL company's net income. Partners/
+    # other shareholders are taxed on the remaining share on their own returns, not here.
+    owner_share_net_income = business_net_income * ownership_pct
+    if ownership_pct < 1.0:
+        business_steps.append(
+            f"Ownership share: {ownership_pct*100:.1f}% of company net income (${business_net_income:,.2f}) "
+            f"= ${owner_share_net_income:,.2f} allocated to this taxpayer."
+        )
+
     if entity in ["Sole Proprietorship", "Single-member LLC"]:
         # All net profit flows to personal Schedule C, subject to SE tax
-        se_calc = calculate_self_employment_tax(business_net_income, filing_status, rules)
+        se_calc = calculate_self_employment_tax(owner_share_net_income, filing_status, rules)
         se_tax = se_calc["value"]
         se_deduction = se_calc["deductible_amount"]
-        qbi_qualified_income = business_net_income
-        business_steps.append(f"Sole Proprietorship/LLC flow-through: Net Profit ${business_net_income:,.2f} is added to ordinary income.")
+        qbi_qualified_income = owner_share_net_income
+        business_steps.append(f"Sole Proprietorship/LLC flow-through: Net Profit ${owner_share_net_income:,.2f} is added to ordinary income.")
         business_steps.append(f"Self-Employment Tax computed: ${se_tax:,.2f} (Deductible portion: ${se_deduction:,.2f})")
-        
+
     elif entity == "Multi-member LLC":
         # Multi-member LLC is treated as partnership. Net profit flows to personal K-1, subject to SE tax
-        se_calc = calculate_self_employment_tax(business_net_income, filing_status, rules)
+        se_calc = calculate_self_employment_tax(owner_share_net_income, filing_status, rules)
         se_tax = se_calc["value"]
         se_deduction = se_calc["deductible_amount"]
-        qbi_qualified_income = business_net_income
-        business_steps.append(f"Partnership (Multi-member LLC) flow-through: Net Profit ${business_net_income:,.2f} flows to K-1.")
+        qbi_qualified_income = owner_share_net_income
+        business_steps.append(f"Partnership (Multi-member LLC) flow-through: This partner's Net Profit share ${owner_share_net_income:,.2f} flows to K-1.")
         business_steps.append(f"Self-Employment Tax computed: ${se_tax:,.2f} (Deductible portion: ${se_deduction:,.2f})")
-        
+
     elif entity == "S Corporation":
         # S-Corp pays owner salary (W-2), and remainder flows through as K-1 distributions (no SE tax)
         # Owner salary is already a W-2 expense for the business. Let's make sure it's counted on personal side.
         # But we assume the personal income csv might or might not have it. Let's assume the business owner W-2
         # is part of the wages. If it's already in w2_personal, we don't double count.
         # Let's count S-Corp profit distributions as K-1 ordinary income (eligible for QBI)
-        # Note: business_net_income is after owner salary.
-        qbi_qualified_income = max(0.0, business_net_income)
-        business_to_personal_distributions = max(0.0, business_net_income)
-        business_steps.append(f"S-Corp flow-through: Net income after owner salary ${business_net_income:,.2f} flows to K-1 distributions (no self-employment tax).")
-        
+        # Note: owner_share_net_income is this shareholder's pro-rata share, after owner salary.
+        qbi_qualified_income = max(0.0, owner_share_net_income)
+        business_to_personal_distributions = max(0.0, owner_share_net_income)
+        business_steps.append(f"S-Corp flow-through: This shareholder's share of net income after owner salary (${owner_share_net_income:,.2f}) flows to K-1 distributions (no self-employment tax).")
+
     elif entity == "C Corporation":
-        # C-Corp net income is taxed at corporate rate. Personal dividends are taxed on personal return.
+        # C-Corp net income is taxed at corporate rate — entity-level, always on the FULL 100%.
         corp_rate = rules.get("corporate_rate", 0.21)
         corporate_tax = max(0.0, business_net_income) * corp_rate
-        # Distributions from C-Corp flow to personal as qualified dividends
-        business_to_personal_distributions = max(0.0, business_net_income - corporate_tax) # Assume all net profit is distributed
-        business_steps.append(f"C-Corp Corporate Income Tax: ${business_net_income:,.2f} * {corp_rate*100}% = ${corporate_tax:,.2f}")
-        business_steps.append(f"C-Corp net profit after tax (${business_to_personal_distributions:,.2f}) flows to personal as dividends.")
+        # This shareholder's pro-rata share of after-tax profit flows to personal as qualified dividends.
+        business_to_personal_distributions = max(0.0, (business_net_income - corporate_tax) * ownership_pct) # Assume all net profit is distributed
+        business_steps.append(f"C-Corp Corporate Income Tax (entity-level, 100%): ${business_net_income:,.2f} * {corp_rate*100}% = ${corporate_tax:,.2f}")
+        business_steps.append(f"This shareholder's share of C-Corp net profit after tax (${business_to_personal_distributions:,.2f}) flows to personal as dividends.")
         
     # 3. Sum up total personal ordinary income
     # Note: 1099 is also subject to SE tax
@@ -170,9 +208,9 @@ def calculate_federal_tax(
     # If C-Corp, dividends are capital gains.
     ordinary_flow_through = 0.0
     if entity in ["Sole Proprietorship", "Single-member LLC", "Multi-member LLC"]:
-        ordinary_flow_through = business_net_income
+        ordinary_flow_through = owner_share_net_income
     elif entity == "S Corporation":
-        ordinary_flow_through = business_net_income
+        ordinary_flow_through = owner_share_net_income
         
     gross_ordinary = w2_personal + consulting_1099 + interest + rental_income + other_income + ordinary_flow_through
     gross_cap_gains = cap_gains + dividends
@@ -225,10 +263,18 @@ def calculate_federal_tax(
     cap_gains_tax, cap_gains_tax_steps = calculate_cap_gains_tax(taxable_cap_gains, taxable_ordinary, filing_status)
     
     total_personal_income_tax = ordinary_tax + cap_gains_tax
-    
+
+    # 9b. Employee-side payroll tax (FICA) on all W-2 wages. This is real money
+    # withheld from every paycheck that no other part of this engine accounts for.
+    # Unlike SE tax, employee FICA is not AGI-deductible.
+    payroll_tax = 0.0
+    if w2_personal > 0:
+        payroll_calc = calculate_payroll_tax(w2_personal, filing_status, rules)
+        payroll_tax = payroll_calc["value"]
+
     # Total combined tax (personal income tax + payroll/SE taxes + corporate taxes)
-    combined_tax = total_personal_income_tax + total_se_tax + corporate_tax
-    
+    combined_tax = total_personal_income_tax + total_se_tax + corporate_tax + payroll_tax + employer_payroll_tax
+
     # Effective Tax Rates
     effective_rate = total_personal_income_tax / agi if agi > 0 else 0.0
     combined_effective_rate = combined_tax / (gross_income + (business_net_income if entity == "C Corporation" else 0)) if (gross_income > 0) else 0.0
@@ -261,19 +307,25 @@ def calculate_federal_tax(
         steps.append(f"    - Total Capital Gains Tax = ${cap_gains_tax:,.2f}")
         
     steps.append(f"13. Total Personal Income Tax = ${total_personal_income_tax:,.2f}")
-    
+
     if entity == "C Corporation":
         steps.append(f"14. C-Corp Corporate Tax = ${corporate_tax:,.2f}")
     if total_se_tax > 0:
         steps.append(f"15. Self-Employment Tax = ${total_se_tax:,.2f}")
-        
-    steps.append(f"16. Combined Total Tax (Personal + SE + Corporate) = ${combined_tax:,.2f}")
-    
+    if payroll_tax > 0:
+        steps.append(f"15b. Employee Payroll Tax (FICA) on W-2 Wages (${w2_personal:,.2f}) = ${payroll_tax:,.2f}")
+    if employer_payroll_tax > 0:
+        steps.append(f"15c. Employer Payroll Tax Match (FICA) on Owner W-2 Wages = ${employer_payroll_tax:,.2f}")
+
+    steps.append(f"16. Combined Total Tax (Personal + SE + Payroll + Corporate) = ${combined_tax:,.2f}")
+
     return {
         "value": total_personal_income_tax,
         "combined_tax": combined_tax,
         "corporate_tax": corporate_tax,
         "se_tax": total_se_tax,
+        "payroll_tax": payroll_tax,
+        "employer_payroll_tax": employer_payroll_tax,
         "agi": agi,
         "taxable_income": taxable_income,
         "ordinary_tax": ordinary_tax,
@@ -282,11 +334,14 @@ def calculate_federal_tax(
         "effective_tax_rate": effective_rate,
         "combined_effective_tax_rate": combined_effective_rate,
         "trace": {
-            "formula": "Federal Tax = Ordinary Bracket Tax + Capital Gains Tax",
+            "formula": "Federal Tax = Ordinary Bracket Tax + Capital Gains Tax + SE Tax + Employee/Employer Payroll Tax + Corporate Tax",
             "inputs": {
                 "personal_income": personal_income,
                 "business_net_income": business_net_income,
+                "ownership_pct": ownership_pct,
+                "owner_share_net_income": owner_share_net_income,
                 "business_entity": business_entity,
+                "owner_w2_salary": owner_w2_salary,
                 "retirement_contributions": retirement_contributions,
                 "filing_status": filing_status
             },
