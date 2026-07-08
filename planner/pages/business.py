@@ -94,7 +94,7 @@ def layout():
                                     [
                                         dbc.Input(
                                             id={"type": "business-input", "field": "revenue_growth"},
-                                            type="number", debounce=True, step=0.0001, value=0.05
+                                            type="number", debounce=True, step=0.01, value=5
                                         ),
                                         dbc.InputGroupText("% / quarter"),
                                     ],
@@ -110,7 +110,7 @@ def layout():
                                     [
                                         dbc.Input(
                                             id={"type": "business-input", "field": "expense_growth"},
-                                            type="number", debounce=True, step=0.0001, value=0.03
+                                            type="number", debounce=True, step=0.01, value=3
                                         ),
                                         dbc.InputGroupText("% / quarter"),
                                     ],
@@ -310,8 +310,8 @@ def populate_business_page(state):
         entity_type,
         b.get("owner_salary", 0),
         b.get("ownership_pct", 100),
-        b.get("revenue_growth", 0.05),
-        b.get("expense_growth", 0.03),
+        float(b.get("revenue_growth", 0.05)) * 100,
+        float(b.get("expense_growth", 0.03)) * 100,
         _OWNER_SALARY_TOOLTIPS.get(entity_type, _OWNER_SALARY_TOOLTIPS["Sole Proprietorship"]),
         f"${annual_ebitda:,.0f}",
         f"${annual_ni:,.0f}",
@@ -358,10 +358,12 @@ def persist_business_edits(biz_vals, biz_ids, current_state, active_scenario):
                 except ValueError:
                     val = 100.0
             elif field in ["revenue_growth", "expense_growth"]:
+                # Field displays whole percentage points (5 = 5%); stored as a fraction.
                 try:
-                    val = max(-1.0, min(5.0, float(val or 0.0)))
+                    pct_points = max(-100.0, min(500.0, float(val or 0.0)))
                 except ValueError:
-                    val = 0.0
+                    pct_points = 0.0
+                val = pct_points / 100.0
             new_state["business"][field] = val
 
     try:

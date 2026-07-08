@@ -1,7 +1,11 @@
 from dash import dash_table, html
+from dash.dash_table.Format import Format, Scheme, Group, Symbol
 import dash_bootstrap_components as dbc
 import pandas as pd
 from typing import List, Dict, Any, Optional
+
+_MONEY_FORMAT = Format(scheme=Scheme.fixed, precision=0, group=Group.yes, symbol=Symbol.yes, symbol_prefix="$")
+_PERCENT_FORMAT = Format(scheme=Scheme.percentage, precision=1)
 
 
 def render_editable_table(
@@ -54,7 +58,7 @@ def render_editable_table(
     # ── Build column config ────────────────────────────────────────────────────
     columns = []
     for col in columns_config:
-        col_type = col.get("type", "numeric")
+        col_type = col.get("type", "text")
         c = {
             "name": col["name"],
             "id": col["id"],
@@ -63,9 +67,9 @@ def render_editable_table(
         }
         if col_type == "numeric":
             if "rate" in col["id"] or "growth" in col["id"] or "pct" in col["id"]:
-                c["format"] = {"specifier": ".1%"}
+                c["format"] = _PERCENT_FORMAT
             else:
-                c["format"] = {"specifier": "$,.0f"}
+                c["format"] = _MONEY_FORMAT
         columns.append(c)
 
     # Ensure all column IDs exist in the dataframe to avoid KeyError
