@@ -9,7 +9,7 @@ import pandas as pd
 
 from planner.components.charts import apply_dark_layout
 from planner.components.editable_table import render_editable_table
-from planner.data_manager import load_tax_rules, save_project_state
+from planner.data_manager import load_tax_rules, save_or_mark_unsaved
 from planner.config import DEFAULT_TAX_YEAR, DEFAULT_STATE
 from planner.engines.forecast import run_forecast, NUMERIC_COLS
 
@@ -207,9 +207,10 @@ def update_horizon_store(val):
     Input("forecast-spreadsheet", "data"),
     State("project-state-store", "data"),
     State("active-scenario-store", "data"),
+    State("autosave-enabled-store", "data"),
     prevent_initial_call=True,
 )
-def persist_forecast_edits(forecast_data, current_state, active_scenario):
+def persist_forecast_edits(forecast_data, current_state, active_scenario, autosave_enabled):
     # forecast_data is None when the table is in empty-state mode (no DataTable rendered)
     if current_state is None or forecast_data is None:
         return no_update, no_update
@@ -234,10 +235,5 @@ def persist_forecast_edits(forecast_data, current_state, active_scenario):
                                        "Capital expenditures", "Owner salary", "Distributions"]}
     new_state["assumptions"]["forecast_overrides"] = overrides
 
-    try:
-        save_project_state(new_state, active_scenario)
-        label = "● Saved"
-    except Exception as e:
-        label = f"⚠ {e}"
-
+    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
     return new_state, label

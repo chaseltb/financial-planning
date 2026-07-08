@@ -8,7 +8,7 @@ import dash_bootstrap_components as dbc
 from planner.components.charts import create_business_trend
 from planner.engines.runner import run_all_engines
 from planner.engines.forecast import DEFAULT_SEED
-from planner.data_manager import save_project_state
+from planner.data_manager import save_or_mark_unsaved
 
 dash.register_page(__name__, path="/business", title="Business Planning")
 
@@ -333,9 +333,10 @@ def populate_business_page(state):
     State({"type": "business-input", "field": ALL}, "id"),
     State("project-state-store", "data"),
     State("active-scenario-store", "data"),
+    State("autosave-enabled-store", "data"),
     prevent_initial_call=True,
 )
-def persist_business_edits(biz_vals, biz_ids, current_state, active_scenario):
+def persist_business_edits(biz_vals, biz_ids, current_state, active_scenario, autosave_enabled):
     if current_state is None:
         return no_update, no_update
 
@@ -366,12 +367,7 @@ def persist_business_edits(biz_vals, biz_ids, current_state, active_scenario):
                 val = pct_points / 100.0
             new_state["business"][field] = val
 
-    try:
-        save_project_state(new_state, active_scenario)
-        label = "● Saved"
-    except Exception as e:
-        label = f"⚠ {e}"
-
+    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
     return new_state, label
 
 
@@ -415,9 +411,10 @@ def populate_business_financials(state):
     State({"type": "business-financials-input", "field": ALL}, "id"),
     State("project-state-store", "data"),
     State("active-scenario-store", "data"),
+    State("autosave-enabled-store", "data"),
     prevent_initial_call=True,
 )
-def persist_business_financials(vals, ids, current_state, active_scenario):
+def persist_business_financials(vals, ids, current_state, active_scenario, autosave_enabled):
     if current_state is None:
         return no_update, no_update
 
@@ -460,10 +457,5 @@ def persist_business_financials(vals, ids, current_state, active_scenario):
     forecast[-1] = last
     new_state["forecast"] = forecast
 
-    try:
-        save_project_state(new_state, active_scenario)
-        label = "● Saved"
-    except Exception as e:
-        label = f"⚠ {e}"
-
+    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
     return new_state, label

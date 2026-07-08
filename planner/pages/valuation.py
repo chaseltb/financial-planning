@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from planner.components.cards import render_metric_card
 from planner.components.charts import create_sensitivity_chart, apply_dark_layout
 from planner.engines.runner import run_all_engines
-from planner.data_manager import save_project_state
+from planner.data_manager import save_or_mark_unsaved
 
 dash.register_page(__name__, path="/valuation", title="Valuation")
 
@@ -289,9 +289,10 @@ def populate_valuation_page(state, stored_method, stored_range, dropdown_method,
     State({"type": "valuation-input", "field": ALL}, "id"),
     State("project-state-store", "data"),
     State("active-scenario-store", "data"),
+    State("autosave-enabled-store", "data"),
     prevent_initial_call=True,
 )
-def persist_valuation_edits(val_vals, val_ids, current_state, active_scenario):
+def persist_valuation_edits(val_vals, val_ids, current_state, active_scenario, autosave_enabled):
     if current_state is None:
         return no_update, no_update
 
@@ -323,12 +324,7 @@ def persist_valuation_edits(val_vals, val_ids, current_state, active_scenario):
                 val = 0.0
             new_state["assumptions"]["custom_valuation_multiplier"] = val
 
-    try:
-        save_project_state(new_state, active_scenario)
-        label = "● Saved"
-    except Exception as e:
-        label = f"⚠ {e}"
-
+    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
     return new_state, label
 
 

@@ -159,7 +159,7 @@ def layout():
                                             "borderRadius": "12px",
                                             "textAlign": "center",
                                             "borderColor": "var(--border-glass)",
-                                            "backgroundColor": "rgba(0,0,0,0.15)",
+                                            "backgroundColor": "var(--bg-secondary)",
                                             "cursor": "pointer"
                                         },
                                         multiple=False

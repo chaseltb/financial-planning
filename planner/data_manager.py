@@ -157,6 +157,22 @@ def save_project_state(state: Dict[str, Any], active_scenario: str = "Baseline")
         }
         save_scenario(active_scenario, scenario)
 
+def save_or_mark_unsaved(state: Dict[str, Any], active_scenario: str, autosave_enabled: Any) -> str:
+    """Persist to disk if autosave is on (the default); otherwise leave the
+    edit in-memory only (project-state-store still updates so calculations
+    stay live) and tell the user to use the "Save Now" button on Settings.
+    Shared by every page's persist-edits callback so the autosave toggle
+    actually does something, instead of always saving unconditionally.
+    """
+    if autosave_enabled is False:
+        return "○ Not saved (autosave off)"
+    try:
+        save_project_state(state, active_scenario)
+        return "● Saved"
+    except Exception as e:
+        return f"⚠ {e}"
+
+
 def load_tax_rules(year: int = DEFAULT_TAX_YEAR, state_code: str = DEFAULT_STATE) -> Dict[str, Any]:
     fed_path = TAX_RULES_DIR / str(year) / "federal.json"
     nc_path = TAX_RULES_DIR / str(year) / "north_carolina.json"

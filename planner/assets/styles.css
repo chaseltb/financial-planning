@@ -122,6 +122,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .sidebar-nav-link {
+    background-color: transparent !important;
     color: var(--text-secondary) !important;
     text-decoration: none !important;
     padding: 12px 16px;

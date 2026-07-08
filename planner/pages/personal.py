@@ -7,7 +7,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 
 from planner.components.editable_table import render_editable_table
-from planner.data_manager import save_project_state
+from planner.data_manager import save_or_mark_unsaved
 
 dash.register_page(__name__, path="/personal", title="Personal Finances")
 
@@ -242,11 +242,12 @@ def populate_personal_page(state):
     State({"type": "profile-input", "field": ALL}, "id"),
     State("project-state-store", "data"),
     State("active-scenario-store", "data"),
+    State("autosave-enabled-store", "data"),
     prevent_initial_call=True,
 )
 def persist_personal_edits(
     profile_vals, inc_data, exp_data, ast_data, liab_data,
-    profile_ids, current_state, active_scenario,
+    profile_ids, current_state, active_scenario, autosave_enabled,
 ):
     if current_state is None:
         return no_update, no_update
@@ -294,12 +295,7 @@ def persist_personal_edits(
     else:
         return no_update, no_update
 
-    try:
-        save_project_state(new_state, active_scenario)
-        label = "● Saved"
-    except Exception as e:
-        label = f"⚠ {e}"
-
+    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
     return new_state, label
 
 

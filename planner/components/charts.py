@@ -2,19 +2,28 @@ import plotly.graph_objects as go
 import pandas as pd
 from typing import Dict, Any, List
 
-# Common dark mode layout adjustments
+# Common chart layout adjustments. Backgrounds are transparent so the chart
+# blends with its card, which IS theme-aware — but Plotly renders to canvas/SVG
+# and can't read CSS variables, so text/gridline colors are picked to stay
+# legible against both the dark and light theme's card color rather than
+# hardcoded to one theme.
+_CHART_TEXT_COLOR = "#64748b"       # slate-500: readable on near-black and near-white
+_CHART_TITLE_COLOR = "#64748b"
+_CHART_GRIDLINE_COLOR = "rgba(128, 128, 128, 0.18)"
+
+
 def apply_dark_layout(fig, title_text: str):
     fig.update_layout(
         title={
             "text": title_text,
-            "font": {"family": "Outfit", "size": 18, "color": "#f8fafc"},
+            "font": {"family": "Outfit", "size": 18, "color": _CHART_TITLE_COLOR},
             "x": 0.05
         },
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font={"family": "Inter", "color": "#94a3b8"},
+        font={"family": "Inter", "color": _CHART_TEXT_COLOR},
         legend={
-            "font": {"size": 11, "color": "#f8fafc"},
+            "font": {"size": 11, "color": _CHART_TEXT_COLOR},
             "orientation": "h",
             "xanchor": "center",
             "x": 0.5,
@@ -22,14 +31,14 @@ def apply_dark_layout(fig, title_text: str):
         },
         margin={"t": 60, "b": 60, "l": 50, "r": 20},
         xaxis={
-            "gridcolor": "rgba(255,255,255,0.08)",
+            "gridcolor": _CHART_GRIDLINE_COLOR,
             "zeroline": False,
-            "tickfont": {"size": 11, "color": "#94a3b8"}
+            "tickfont": {"size": 11, "color": _CHART_TEXT_COLOR}
         },
         yaxis={
-            "gridcolor": "rgba(255,255,255,0.08)",
+            "gridcolor": _CHART_GRIDLINE_COLOR,
             "zeroline": False,
-            "tickfont": {"size": 11, "color": "#94a3b8"}
+            "tickfont": {"size": 11, "color": _CHART_TEXT_COLOR}
         }
     )
     return fig
