@@ -72,7 +72,7 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "profile-input", "field": "retirement_401k"},
-                                            type="number", min=0, max=100000, step=500, value=0
+                                            type="number", debounce=True, min=0, max=100000, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
@@ -89,7 +89,7 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "profile-input", "field": "retirement_ira"},
-                                            type="number", min=0, max=50000, step=500, value=0
+                                            type="number", debounce=True, min=0, max=50000, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
@@ -106,7 +106,7 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "profile-input", "field": "retirement_hsa"},
-                                            type="number", min=0, max=20000, step=100, value=0
+                                            type="number", debounce=True, min=0, max=20000, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
@@ -123,7 +123,7 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "profile-input", "field": "solo_401k"},
-                                            type="number", min=0, max=150000, step=1000, value=0
+                                            type="number", debounce=True, min=0, max=150000, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
@@ -216,10 +216,10 @@ def populate_personal_page(state):
 
     p = state.get("profile", {})
     return (
-        render_editable_table("income-table",      pd.DataFrame(state.get("income",       [])), _INCOME_COLS),
-        render_editable_table("expenses-table",    pd.DataFrame(state.get("expenses",     [])), _EXPENSE_COLS),
-        render_editable_table("assets-table",      pd.DataFrame(state.get("assets",       [])), _ASSET_COLS),
-        render_editable_table("liabilities-table", pd.DataFrame(state.get("liabilities",  [])), _LIAB_COLS),
+        render_editable_table("income-table",      pd.DataFrame(state.get("income",       [])), _INCOME_COLS,  empty_label="income streams"),
+        render_editable_table("expenses-table",    pd.DataFrame(state.get("expenses",     [])), _EXPENSE_COLS, empty_label="living expenses"),
+        render_editable_table("assets-table",      pd.DataFrame(state.get("assets",       [])), _ASSET_COLS,   empty_label="assets"),
+        render_editable_table("liabilities-table", pd.DataFrame(state.get("liabilities",  [])), _LIAB_COLS,    empty_label="liabilities"),
         p.get("filing_status",  "single"),
         p.get("retirement_401k", 0),
         p.get("retirement_ira",  0),
@@ -269,14 +269,28 @@ def persist_personal_edits(
                     except ValueError:
                         val = 0.0
                 new_state["profile"][field] = val
-    elif "income-table" in triggered and inc_data is not None:
-        new_state["income"] = inc_data
-    elif "expenses-table" in triggered and exp_data is not None:
-        new_state["expenses"] = exp_data
-    elif "assets-table" in triggered and ast_data is not None:
-        new_state["assets"] = ast_data
-    elif "liabilities-table" in triggered and liab_data is not None:
-        new_state["liabilities"] = liab_data
+    elif "income-table" in triggered:
+        # inc_data is None when the table is in empty-state (no DataTable rendered).
+        # In that case, data is already empty — only persist if we have actual data.
+        if inc_data is not None:
+            new_state["income"] = [r for r in inc_data if r]
+        else:
+            return no_update, no_update
+    elif "expenses-table" in triggered:
+        if exp_data is not None:
+            new_state["expenses"] = [r for r in exp_data if r]
+        else:
+            return no_update, no_update
+    elif "assets-table" in triggered:
+        if ast_data is not None:
+            new_state["assets"] = [r for r in ast_data if r]
+        else:
+            return no_update, no_update
+    elif "liabilities-table" in triggered:
+        if liab_data is not None:
+            new_state["liabilities"] = [r for r in liab_data if r]
+        else:
+            return no_update, no_update
     else:
         return no_update, no_update
 
@@ -292,54 +306,82 @@ def persist_personal_edits(
 # ─────────────────────────────────────────────────────────────────────────────
 # Callbacks: Add rows to this page's editable tables
 # ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# Add-row callbacks: output to project-state-store so the container re-renders
+# with a real DataTable that the user can then edit.
+# ─────────────────────────────────────────────────────────────────────────────
 @callback(
-    Output("income-table", "data", allow_duplicate=True),
+    Output("project-state-store", "data", allow_duplicate=True),
+    Output("save-status-indicator", "children", allow_duplicate=True),
     Input("income-table-add-btn", "n_clicks"),
-    State("income-table", "data"),
+    State("project-state-store", "data"),
+    State("active-scenario-store", "data"),
     prevent_initial_call=True,
 )
-def add_income_row(n, rows):
-    rows = rows or []
-    if n:
-        rows.append({"id": f"inc_{len(rows)+1}", "category": "Other", "description": "New Source", "amount": 0.0})
-    return rows
+def add_income_row(n, state, active_scenario):
+    if not n or state is None:
+        return no_update, no_update
+    new_state = copy.deepcopy(state)
+    rows = list(new_state.get("income", []))
+    rows.append({"category": "Other", "description": "New Income Source", "amount": 0.0})
+    new_state["income"] = rows
+    save_project_state(new_state, active_scenario)
+    return new_state, "● Saved"
 
 
 @callback(
-    Output("expenses-table", "data", allow_duplicate=True),
+    Output("project-state-store", "data", allow_duplicate=True),
+    Output("save-status-indicator", "children", allow_duplicate=True),
     Input("expenses-table-add-btn", "n_clicks"),
-    State("expenses-table", "data"),
+    State("project-state-store", "data"),
+    State("active-scenario-store", "data"),
     prevent_initial_call=True,
 )
-def add_expense_row(n, rows):
-    rows = rows or []
-    if n:
-        rows.append({"id": f"exp_{len(rows)+1}", "category": "Other", "description": "New Expense", "amount": 0.0})
-    return rows
+def add_expense_row(n, state, active_scenario):
+    if not n or state is None:
+        return no_update, no_update
+    new_state = copy.deepcopy(state)
+    rows = list(new_state.get("expenses", []))
+    rows.append({"category": "Other", "description": "New Expense", "amount": 0.0})
+    new_state["expenses"] = rows
+    save_project_state(new_state, active_scenario)
+    return new_state, "● Saved"
 
 
 @callback(
-    Output("assets-table", "data", allow_duplicate=True),
+    Output("project-state-store", "data", allow_duplicate=True),
+    Output("save-status-indicator", "children", allow_duplicate=True),
     Input("assets-table-add-btn", "n_clicks"),
-    State("assets-table", "data"),
+    State("project-state-store", "data"),
+    State("active-scenario-store", "data"),
     prevent_initial_call=True,
 )
-def add_asset_row(n, rows):
-    rows = rows or []
-    if n:
-        rows.append({"id": f"ast_{len(rows)+1}", "category": "Other", "description": "New Asset", "value": 0.0, "growth_rate": 0.05})
-    return rows
+def add_asset_row(n, state, active_scenario):
+    if not n or state is None:
+        return no_update, no_update
+    new_state = copy.deepcopy(state)
+    rows = list(new_state.get("assets", []))
+    rows.append({"category": "Investment", "description": "New Asset", "value": 0.0, "growth_rate": 0.05})
+    new_state["assets"] = rows
+    save_project_state(new_state, active_scenario)
+    return new_state, "● Saved"
 
 
 @callback(
-    Output("liabilities-table", "data", allow_duplicate=True),
+    Output("project-state-store", "data", allow_duplicate=True),
+    Output("save-status-indicator", "children", allow_duplicate=True),
     Input("liabilities-table-add-btn", "n_clicks"),
-    State("liabilities-table", "data"),
+    State("project-state-store", "data"),
+    State("active-scenario-store", "data"),
     prevent_initial_call=True,
 )
-def add_liability_row(n, rows):
-    rows = rows or []
-    if n:
-        rows.append({"id": f"liab_{len(rows)+1}", "category": "Other", "description": "New Liability",
-                     "value": 0.0, "interest_rate": 0.05, "monthly_payment": 0.0})
-    return rows
+def add_liability_row(n, state, active_scenario):
+    if not n or state is None:
+        return no_update, no_update
+    new_state = copy.deepcopy(state)
+    rows = list(new_state.get("liabilities", []))
+    rows.append({"category": "Debt", "description": "New Liability",
+                 "value": 0.0, "interest_rate": 0.05, "monthly_payment": 0.0})
+    new_state["liabilities"] = rows
+    save_project_state(new_state, active_scenario)
+    return new_state, "● Saved"

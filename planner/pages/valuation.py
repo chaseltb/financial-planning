@@ -31,7 +31,7 @@ def layout():
                                 dbc.InputGroup(
                                     [
                                         dbc.Input(id={"type": "valuation-input", "field": "revenue_mult"},
-                                                  type="number", step=0.1, value=2.5),
+                                                  type="number", debounce=True, step=0.0001, value=2.5),
                                         dbc.InputGroupText("x"),
                                     ],
                                     className="mb-3"
@@ -45,7 +45,7 @@ def layout():
                                 dbc.InputGroup(
                                     [
                                         dbc.Input(id={"type": "valuation-input", "field": "ebitda_mult"},
-                                                  type="number", step=0.1, value=6.0),
+                                                  type="number", debounce=True, step=0.0001, value=6.0),
                                         dbc.InputGroupText("x"),
                                     ],
                                     className="mb-3"
@@ -59,7 +59,7 @@ def layout():
                                 dbc.InputGroup(
                                     [
                                         dbc.Input(id={"type": "valuation-input", "field": "net_income_mult"},
-                                                  type="number", step=0.1, value=8.0),
+                                                  type="number", debounce=True, step=0.0001, value=8.0),
                                         dbc.InputGroupText("x"),
                                     ],
                                     className="mb-3"
@@ -73,7 +73,7 @@ def layout():
                                 dbc.InputGroup(
                                     [
                                         dbc.Input(id={"type": "valuation-input", "field": "sde_mult"},
-                                                  type="number", step=0.1, value=4.5),
+                                                  type="number", debounce=True, step=0.0001, value=4.5),
                                         dbc.InputGroupText("x"),
                                     ],
                                     className="mb-3"
@@ -87,7 +87,7 @@ def layout():
                                 dbc.InputGroup(
                                     [
                                         dbc.Input(id={"type": "valuation-input", "field": "fcf_mult"},
-                                                  type="number", step=0.1, value=7.0),
+                                                  type="number", debounce=True, step=0.0001, value=7.0),
                                         dbc.InputGroupText("x"),
                                     ],
                                     className="mb-3"
@@ -99,7 +99,7 @@ def layout():
                                     id="label-custom-name"
                                 ),
                                 dbc.Input(id={"type": "valuation-input", "field": "custom_name"},
-                                          type="text", value="Custom Multiplier", className="mb-3"),
+                                          type="text", debounce=True, value="Custom Multiplier", className="mb-3"),
                                 dbc.Tooltip("Label for your custom valuation methodology.", target="label-custom-name"),
                                 
                                 html.Label(
@@ -109,7 +109,7 @@ def layout():
                                 dbc.InputGroup(
                                     [
                                         dbc.Input(id={"type": "valuation-input", "field": "custom_mult"},
-                                                  type="number", step=0.1, value=3.0),
+                                                  type="number", debounce=True, step=0.0001, value=3.0),
                                         dbc.InputGroupText("x"),
                                     ],
                                     className="mb-3"
@@ -157,7 +157,7 @@ def layout():
                                                     html.Label("Sensitivity Range (+/- %)"),
                                                     dbc.Input(
                                                         id="valuation-sensitivity-range",
-                                                        type="number", min=0.01, max=0.99, step=0.05, value=0.20,
+                                                        type="number", debounce=True, min=0.01, max=0.99, step=0.0001, value=0.20,
                                                         className="mb-3",
                                                     ),
                                                 ],

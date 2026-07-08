@@ -52,25 +52,34 @@ def run_all_engines(
     forecast_df = forecast_results["forecast_df"]
     only_forecast_df = forecast_results["only_forecast_df"]
 
+    # "recent_q" is the forward-projected quarter (horizon quarters out) — used only
+    # for explicitly quarter-labeled, forward-looking displays (e.g. "Cash at End of
+    # 2027-Q4"). Current-state figures (EBITDA, revenue, tax) must use the actual
+    # latest ACTUAL quarter instead, or every number on the app would silently be a
+    # multi-year-out projection instead of "now".
     recent_q = forecast_df.iloc[-1]
-    ebitda_q = float(recent_q["EBITDA"])
-    revenue_q = float(recent_q["Revenue"])
-    capex_q = float(recent_q["Capital expenditures"])
+    current_q = forecast_results["history_df"].iloc[-1]
+    ebitda_q = float(current_q["EBITDA"])
+    revenue_q = float(current_q["Revenue"])
+    capex_q = float(current_q["Capital expenditures"])
+
     owner_salary = float(state["business"].get("owner_salary", 0.0))
     entity_type = state["business"].get("entity_type", "Sole Proprietorship")
+    # Only S-Corps/C-Corps can legally run payroll and pay the owner W-2 wages.
+    # Sole proprietors and LLC members take an owner's draw instead — their full net
+    # profit stays subject to self-employment tax, so "owner salary" doesn't apply.
+    owner_w2_salary = owner_salary if entity_type in ("S Corporation", "C Corporation") else 0.0
+    ownership_pct = max(0.0, min(1.0, float(state["business"].get("ownership_pct", 100.0)) / 100.0))
     filing_status = state["profile"].get("filing_status", "single")
 
     # ── Personal income map ───────────────────────────────────────────────
     personal_income_map: Dict[str, float] = {}
     for inc in state["income"]:
         cat = inc.get("category", "Other")
-        # Avoid double-counting the owner salary added below
-        if cat == "W-2" and inc.get("description") == "Business Owner Salary":
-            continue
         personal_income_map[cat] = personal_income_map.get(cat, 0.0) + float(inc.get("amount", 0.0))
-    personal_income_map["W-2"] = personal_income_map.get("W-2", 0.0) + owner_salary
+    personal_income_map["W-2"] = personal_income_map.get("W-2", 0.0) + owner_w2_salary
 
-    annual_net_biz_income = (ebitda_q - owner_salary / 4.0) * 4.0
+    annual_net_biz_income = (ebitda_q - owner_w2_salary / 4.0) * 4.0
 
     retirement = {
         "retirement_401k": float(state["profile"].get("retirement_401k", 0.0)),
@@ -85,6 +94,8 @@ def run_all_engines(
         personal_income=personal_income_map,
         business_net_income=annual_net_biz_income,
         business_entity=entity_type,
+        owner_w2_salary=owner_w2_salary,
+        ownership_pct=ownership_pct,
         retirement_contributions=retirement,
         filing_status=filing_status,
         rules=fed_rules,
@@ -109,7 +120,7 @@ def run_all_engines(
         "revenue": revenue_q * 4.0,
         "ebitda": ebitda_q * 4.0,
         "net_income": annual_net_biz_income,
-        "owner_salary": owner_salary,
+        "owner_salary": owner_w2_salary,
         "capex": capex_q * 4.0,
         "taxes": fed_tax["corporate_tax"] + nc_tax["corporate_tax"],
     }
@@ -139,6 +150,7 @@ def run_all_engines(
         "capex_q": capex_q,
         "annual_net_biz_income": annual_net_biz_income,
         "owner_salary": owner_salary,
+        "owner_w2_salary": owner_w2_salary,
         "entity_type": entity_type,
         "filing_status": filing_status,
         "personal_income_map": personal_income_map,
