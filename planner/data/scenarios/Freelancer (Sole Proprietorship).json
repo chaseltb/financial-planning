@@ -1,0 +1,9 @@
+{
+  "name": "Freelancer (Sole Proprietorship)",
+  "changes": {
+    "business.entity_type": "Sole Proprietorship",
+    "business.owner_salary": 0,
+    "business.ownership_pct": 100,
+    "profile.solo_401k": 15000
+  }
+}
