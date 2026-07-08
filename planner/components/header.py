@@ -15,18 +15,30 @@ def render_header():
         [
             html.Div(
                 [
-                    html.H2(
-                        id="page-title",
-                        children="Financial Overview",
-                        className="mb-0",
-                        style={"color": "var(--text-primary)"},
+                    dbc.Button(
+                        html.I(className="bi bi-list"),
+                        id="mobile-nav-toggle",
+                        className="mobile-nav-toggle-btn",
+                        color="secondary",
+                        n_clicks=0,
                     ),
-                    html.P(
-                        "Personal + Business Financial Planner",
-                        className="text-muted mb-0",
-                        style={"fontSize": "0.9rem"},
+                    html.Div(
+                        [
+                            html.H2(
+                                id="page-title",
+                                children="Financial Overview",
+                                className="mb-0",
+                                style={"color": "var(--text-primary)"},
+                            ),
+                            html.P(
+                                "Personal + Business Financial Planner",
+                                className="text-muted mb-0",
+                                style={"fontSize": "0.9rem"},
+                            ),
+                        ]
                     ),
-                ]
+                ],
+                style={"display": "flex", "alignItems": "center", "gap": "12px"},
             ),
             html.Div(
                 [

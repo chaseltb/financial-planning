@@ -21,7 +21,7 @@ def render_sidebar():
                         href="/business", active="exact", className="sidebar-nav-link"
                     ),
                     dbc.NavLink(
-                        [html.I(className="bi bi-calculator-fill me-2"), "Taxes & Tracing"],
+                        [html.I(className="bi bi-calculator-fill me-2"), "Tax Planning"],
                         href="/taxes", active="exact", className="sidebar-nav-link"
                     ),
                     dbc.NavLink(
@@ -49,5 +49,6 @@ def render_sidebar():
                 pills=True,
             ),
         ],
+        id="app-sidebar",
         className="sidebar-container",
     )

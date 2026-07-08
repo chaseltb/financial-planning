@@ -9,7 +9,7 @@ Architecture:
   - Page-specific callbacks live inside each page file using @dash.callback.
 """
 import dash
-from dash import html, dcc, Input, Output, callback_context
+from dash import html, dcc, Input, Output, State, callback_context
 import dash_bootstrap_components as dbc
 
 from planner.data_manager import load_project_state, get_scenarios_list
@@ -49,10 +49,16 @@ app.layout = html.Div(
         # browser (not the JSON backend) since they're this device's UI prefs.
         dcc.Store(id="theme-store", data="dark", storage_type="local"),
         dcc.Store(id="autosave-enabled-store", data=True, storage_type="local"),
+        dcc.Store(id="mobile-nav-open-store", data=False),
         html.Div(id="theme-applier", style={"display": "none"}),
 
         # ── Chrome (always visible) ────────────────────────────────────────
         render_sidebar(),
+        # Tap-outside-to-close overlay for the mobile nav drawer — a sibling of
+        # the sidebar (not nested inside it), since the sidebar gets a CSS
+        # `transform` for its slide-in animation, and that creates a new
+        # containing block that would break a nested `position: fixed` child.
+        html.Div(id="mobile-nav-backdrop", n_clicks=0, className="mobile-nav-backdrop"),
         html.Div(
             [
                 render_header(),          # header-scenario-dropdown, save-status-indicator
@@ -74,6 +80,44 @@ app.clientside_callback(
     """,
     Output("theme-applier", "data-theme"),
     Input("theme-store", "data"),
+)
+
+# Mobile nav drawer: the hamburger button toggles it open/closed; navigating to
+# a new page or tapping the backdrop always closes it (whichever fired last
+# wins, since this reads current state from the store rather than counting
+# clicks — a plain odd/even click count breaks once a second closing trigger
+# is mixed in).
+app.clientside_callback(
+    """
+    function(toggleClicks, pathname, backdropClicks, isOpen) {
+        const trigger = window.dash_clientside.callback_context.triggered;
+        const triggeredId = trigger.length ? trigger[0].prop_id.split('.')[0] : '';
+        if (triggeredId === 'mobile-nav-toggle') {
+            return !isOpen;
+        }
+        return false;
+    }
+    """,
+    Output("mobile-nav-open-store", "data"),
+    Input("mobile-nav-toggle", "n_clicks"),
+    Input("url", "pathname"),
+    Input("mobile-nav-backdrop", "n_clicks"),
+    State("mobile-nav-open-store", "data"),
+    prevent_initial_call=True,
+)
+
+app.clientside_callback(
+    """
+    function(isOpen) {
+        return [
+            isOpen ? 'sidebar-container mobile-open' : 'sidebar-container',
+            isOpen ? 'mobile-nav-backdrop visible' : 'mobile-nav-backdrop'
+        ];
+    }
+    """,
+    Output("app-sidebar", "className"),
+    Output("mobile-nav-backdrop", "className"),
+    Input("mobile-nav-open-store", "data"),
 )
 
 
