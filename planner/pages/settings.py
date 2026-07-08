@@ -77,8 +77,19 @@ def layout():
                                             value=["autosave"],
                                             id="settings-autosave-toggle",
                                             switch=True,
-                                            className="mb-3"
-                                        )
+                                            className="mb-2"
+                                        ),
+                                        html.Div(
+                                            "When off, your edits still apply during this session but "
+                                            "aren't written to disk until you click \"Save Now\".",
+                                            className="text-muted mb-3", style={"fontSize": "0.8rem"},
+                                        ),
+                                        dbc.Button(
+                                            [html.I(className="bi bi-save me-1"), "Save Now"],
+                                            id="settings-save-now-btn", color="secondary", size="sm",
+                                            className="mb-2",
+                                        ),
+                                        html.Div(id="settings-save-now-status", style={"fontSize": "0.85rem"}),
                                     ]
                                 )
                             ],
@@ -166,6 +177,69 @@ def layout():
         fluid=True
     )
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callbacks: Theme selection (reflects/updates the shared theme-store)
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("settings-theme", "value"),
+    Input("theme-store", "data"),
+    prevent_initial_call=False,
+)
+def sync_theme_dropdown_from_store(theme):
+    return theme or "dark"
+
+
+@callback(
+    Output("theme-store", "data"),
+    Input("settings-theme", "value"),
+    prevent_initial_call=True,
+)
+def sync_theme_store_from_dropdown(theme):
+    return theme or "dark"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callbacks: Autosave toggle (reflects/updates the shared autosave-enabled-store)
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("settings-autosave-toggle", "value"),
+    Input("autosave-enabled-store", "data"),
+    prevent_initial_call=False,
+)
+def sync_autosave_toggle_from_store(enabled):
+    return ["autosave"] if enabled is not False else []
+
+
+@callback(
+    Output("autosave-enabled-store", "data"),
+    Input("settings-autosave-toggle", "value"),
+    prevent_initial_call=True,
+)
+def sync_autosave_store_from_toggle(toggle_val):
+    return "autosave" in (toggle_val or [])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Manual "Save Now" (writes the in-memory state to disk immediately —
+# needed when autosave is off, but works regardless)
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("settings-save-now-status", "children"),
+    Input("settings-save-now-btn", "n_clicks"),
+    State("project-state-store", "data"),
+    State("active-scenario-store", "data"),
+    prevent_initial_call=True,
+)
+def save_now(n_clicks, state, active_scenario):
+    if state is None:
+        return html.Span("Nothing to save yet.", className="text-muted")
+    try:
+        save_project_state(state, active_scenario)
+        return html.Span("✓ Saved to disk.", style={"color": "#10b981"})
+    except Exception as e:
+        return html.Span(f"⚠ {e}", style={"color": "#ef4444"})
 
 
 # ─────────────────────────────────────────────────────────────────────────────

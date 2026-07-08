@@ -279,45 +279,47 @@ def calculate_federal_tax(
     effective_rate = total_personal_income_tax / agi if agi > 0 else 0.0
     combined_effective_rate = combined_tax / (gross_income + (business_net_income if entity == "C Corporation" else 0)) if (gross_income > 0) else 0.0
     
-    # Build complete steps for explanation
-    steps = [
-        f"1. Gross Ordinary Income: W-2 (${w2_personal:,.2f}) + 1099 (${consulting_1099:,.2f}) + Interest (${interest:,.2f}) + Rental (${rental_income:,.2f}) + Pass-through Profit (${ordinary_flow_through:,.2f}) = ${gross_ordinary:,.2f}",
-        f"2. Gross Capital Gains & Dividends: Cap Gains/Dividends (${cap_gains + dividends:,.2f}) + C-Corp Dividend Distribution (${business_to_personal_distributions if entity == 'C Corporation' else 0:,.2f}) = ${gross_cap_gains:,.2f}",
-        f"3. Total Gross Income: Ordinary (${gross_ordinary:,.2f}) + Capital Gains (${gross_cap_gains:,.2f}) = ${gross_income:,.2f}",
-        f"4. Retirement Deductions: Pre-tax Contributions = ${total_retirement_deductions:,.2f}",
-        f"5. Self-Employment Tax Deduction: 50% of SE Tax = ${total_se_deduction:,.2f}",
-        f"6. Adjusted Gross Income (AGI): Gross Income (${gross_income:,.2f}) - Retirement (${total_retirement_deductions:,.2f}) - SE Deduction (${total_se_deduction:,.2f}) = ${agi:,.2f}",
-        f"7. Standard Deduction: ${std_deduction:,.2f} ({filing_status.capitalize()})",
+    # Build complete steps for explanation. These render inside a single <ol>
+    # (see render_explain_panel) that numbers them automatically — don't
+    # hardcode numbers here or they'll conflict with the list's own numbering.
+    steps = list(business_steps) + [
+        f"Gross Ordinary Income: W-2 (${w2_personal:,.2f}) + 1099 (${consulting_1099:,.2f}) + Interest (${interest:,.2f}) + Rental (${rental_income:,.2f}) + Pass-through Profit (${ordinary_flow_through:,.2f}) = ${gross_ordinary:,.2f}",
+        f"Gross Capital Gains & Dividends: Cap Gains/Dividends (${cap_gains + dividends:,.2f}) + C-Corp Dividend Distribution (${business_to_personal_distributions if entity == 'C Corporation' else 0:,.2f}) = ${gross_cap_gains:,.2f}",
+        f"Total Gross Income: Ordinary (${gross_ordinary:,.2f}) + Capital Gains (${gross_cap_gains:,.2f}) = ${gross_income:,.2f}",
+        f"Retirement Deductions: Pre-tax Contributions = ${total_retirement_deductions:,.2f}",
+        f"Self-Employment Tax Deduction: 50% of SE Tax = ${total_se_deduction:,.2f}",
+        f"Adjusted Gross Income (AGI): Gross Income (${gross_income:,.2f}) - Retirement (${total_retirement_deductions:,.2f}) - SE Deduction (${total_se_deduction:,.2f}) = ${agi:,.2f}",
+        f"Standard Deduction: ${std_deduction:,.2f} ({filing_status.capitalize()})",
     ]
-    
+
     if qbi_deduction > 0:
-        steps.append(f"8. QBI Pass-through Deduction: 20% of eligible QBI (${qbi_qualified_income:,.2f}) = ${qbi_deduction:,.2f}")
+        steps.append(f"QBI Pass-through Deduction: 20% of eligible QBI (${qbi_qualified_income:,.2f}) = ${qbi_deduction:,.2f}")
     else:
-        steps.append(f"8. QBI Pass-through Deduction: $0.00 (No pass-through income or limited by taxable income)")
-        
-    steps.append(f"9. Taxable Income: AGI (${agi:,.2f}) - Deductions (${total_deductions:,.2f}) = ${taxable_income:,.2f}")
-    steps.append(f"10. Taxable Ordinary Income: ${taxable_ordinary:,.2f} | Taxable Capital Gains: ${taxable_cap_gains:,.2f}")
-    steps.append("11. Ordinary Tax Bracket Calculations:")
+        steps.append(f"QBI Pass-through Deduction: $0.00 (No pass-through income or limited by taxable income)")
+
+    steps.append(f"Taxable Income: AGI (${agi:,.2f}) - Deductions (${total_deductions:,.2f}) = ${taxable_income:,.2f}")
+    steps.append(f"Taxable Ordinary Income: ${taxable_ordinary:,.2f} | Taxable Capital Gains: ${taxable_cap_gains:,.2f}")
+    steps.append("Ordinary Tax Bracket Calculations:")
     steps.extend([f"    - {s}" for s in ordinary_tax_steps])
     steps.append(f"    - Total Ordinary Income Tax = ${ordinary_tax:,.2f}")
-    
+
     if taxable_cap_gains > 0:
-        steps.append("12. Capital Gains Tax Calculations:")
+        steps.append("Capital Gains Tax Calculations:")
         steps.extend([f"    - {s}" for s in cap_gains_tax_steps])
         steps.append(f"    - Total Capital Gains Tax = ${cap_gains_tax:,.2f}")
-        
-    steps.append(f"13. Total Personal Income Tax = ${total_personal_income_tax:,.2f}")
+
+    steps.append(f"Total Personal Income Tax = ${total_personal_income_tax:,.2f}")
 
     if entity == "C Corporation":
-        steps.append(f"14. C-Corp Corporate Tax = ${corporate_tax:,.2f}")
+        steps.append(f"C-Corp Corporate Tax = ${corporate_tax:,.2f}")
     if total_se_tax > 0:
-        steps.append(f"15. Self-Employment Tax = ${total_se_tax:,.2f}")
+        steps.append(f"Self-Employment Tax = ${total_se_tax:,.2f}")
     if payroll_tax > 0:
-        steps.append(f"15b. Employee Payroll Tax (FICA) on W-2 Wages (${w2_personal:,.2f}) = ${payroll_tax:,.2f}")
+        steps.append(f"Employee Payroll Tax (FICA) on W-2 Wages (${w2_personal:,.2f}) = ${payroll_tax:,.2f}")
     if employer_payroll_tax > 0:
-        steps.append(f"15c. Employer Payroll Tax Match (FICA) on Owner W-2 Wages = ${employer_payroll_tax:,.2f}")
+        steps.append(f"Employer Payroll Tax Match (FICA) on Owner W-2 Wages = ${employer_payroll_tax:,.2f}")
 
-    steps.append(f"16. Combined Total Tax (Personal + SE + Payroll + Corporate) = ${combined_tax:,.2f}")
+    steps.append(f"Combined Total Tax (Personal + SE + Payroll + Corporate) = ${combined_tax:,.2f}")
 
     return {
         "value": total_personal_income_tax,

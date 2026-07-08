@@ -16,6 +16,23 @@ dash.register_page(__name__, path="/valuation", title="Valuation")
 def layout():
     return dbc.Container(
         [
+            html.Div(
+                [
+                    html.Div("OUR BEST ESTIMATE", className="text-muted",
+                             style={"fontSize": "0.8rem", "letterSpacing": "0.05em", "fontWeight": "600"}),
+                    html.H1(id="valuation-headline-value", style={"fontWeight": "800", "marginBottom": "4px"}),
+                    html.Div(id="valuation-headline-range", className="text-muted", style={"fontSize": "0.95rem"}),
+                    html.Div(
+                        "Based on the EBITDA Multiple method — the most commonly used approach for "
+                        "small-business valuation. The other five methods below are shown for comparison; "
+                        "they can vary widely depending on which one a buyer or lender chooses to weigh.",
+                        className="text-muted mt-2",
+                        style={"fontSize": "0.85rem", "maxWidth": "720px"},
+                    ),
+                ],
+                className="glass-card mb-4",
+                style={"borderLeft": "4px solid var(--accent-emerald)"},
+            ),
             dbc.Row(id="valuation-cards-row", className="mb-4"),
             dbc.Row(
                 [
@@ -157,7 +174,7 @@ def layout():
                                                     html.Label("Sensitivity Range (+/- %)"),
                                                     dbc.Input(
                                                         id="valuation-sensitivity-range",
-                                                        type="number", debounce=True, min=0.01, max=0.99, step=0.0001, value=0.20,
+                                                        type="number", debounce=True, min=1, max=99, step=0.01, value=20,
                                                         className="mb-3",
                                                     ),
                                                 ],
@@ -180,6 +197,8 @@ def layout():
 
 
 @callback(
+    Output("valuation-headline-value",  "children"),
+    Output("valuation-headline-range",  "children"),
     Output("valuation-cards-row",       "children"),
     Output("valuation-comparison-chart","figure"),
     Output("valuation-sensitivity-chart","figure"),
@@ -199,17 +218,22 @@ def layout():
 )
 def populate_valuation_page(state, stored_method, stored_range, dropdown_method, input_range):
     if state is None:
-        return [no_update] * 10
+        return [no_update] * 12
 
-    # Page-local inputs take priority over stored defaults
+    # Page-local inputs take priority over stored defaults.
+    # The input field displays whole percentage points (20 = 20%); convert to a fraction.
     sens_method = dropdown_method or stored_method or "EBITDA Multiple"
-    sens_range  = input_range or stored_range or 0.20
+    sens_range  = (float(input_range) / 100.0) if input_range else (stored_range or 0.20)
 
     r = run_all_engines(state, sensitivity_method=sens_method, sensitivity_range=float(sens_range))
     val = r["val_result"]
     multiples = r["multiples"]
     custom = r["custom_method"]
     sens = r["sensitivity"]
+
+    all_values = list(val["valuations"].values())
+    headline_value = f"${val['valuations']['EBITDA Multiple']:,.0f}"
+    headline_range = f"Other methods range from ${min(all_values):,.0f} to ${max(all_values):,.0f}"
 
     cards = [
         render_metric_card("Revenue Multiple",
@@ -243,6 +267,7 @@ def populate_valuation_page(state, stored_method, stored_range, dropdown_method,
     fig_sens = create_sensitivity_chart(sens["sensitivity_curve"], sens_method)
 
     return (
+        headline_value, headline_range,
         cards, fig_comp, fig_sens,
         float(multiples.get("revenue", 2.5)),
         float(multiples.get("ebitda", 6.0)),
@@ -325,4 +350,5 @@ def update_sens_method(val):
     prevent_initial_call=True,
 )
 def update_sens_range(val):
-    return val or 0.20
+    # Field displays whole percentage points (20 = 20%); store as a fraction.
+    return (float(val) / 100.0) if val else 0.20

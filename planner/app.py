@@ -45,6 +45,11 @@ app.layout = html.Div(
         dcc.Store(id="forecast-horizon-store", data=8, storage_type="session"),
         dcc.Store(id="sensitivity-method-store", data="EBITDA Multiple", storage_type="session"),
         dcc.Store(id="sensitivity-range-store", data=0.20, storage_type="session"),
+        # Display/behavior preferences set on the Settings page — persisted in the
+        # browser (not the JSON backend) since they're this device's UI prefs.
+        dcc.Store(id="theme-store", data="dark", storage_type="local"),
+        dcc.Store(id="autosave-enabled-store", data=True, storage_type="local"),
+        html.Div(id="theme-applier", style={"display": "none"}),
 
         # ── Chrome (always visible) ────────────────────────────────────────
         render_sidebar(),
@@ -56,6 +61,19 @@ app.layout = html.Div(
             className="main-content",
         ),
     ]
+)
+
+# Applies the chosen theme to <html data-theme="..."> so CSS variable overrides
+# in assets/styles.css take effect immediately, including on first load.
+app.clientside_callback(
+    """
+    function(theme) {
+        document.documentElement.setAttribute('data-theme', theme || 'dark');
+        return '';
+    }
+    """,
+    Output("theme-applier", "data-theme"),
+    Input("theme-store", "data"),
 )
 
 

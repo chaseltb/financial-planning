@@ -50,14 +50,16 @@ def calculate_valuation(
         "FCF Multiple": val_fcf
     }
     
+    # These render inside an auto-numbering <ol> (see render_explain_panel) —
+    # no hardcoded numbers here.
     steps = [
-        f"1. Revenue Multiple Method: Annualized Revenue (${revenue:,.2f}) * Multiple ({mult_rev}) = ${val_rev:,.2f}",
-        f"2. EBITDA Multiple Method: Annualized EBITDA (${ebitda:,.2f}) * Multiple ({mult_ebitda}) = ${val_ebitda:,.2f}",
-        f"3. Net Income Multiple Method: Annualized Net Income (${net_income:,.2f}) * Multiple ({mult_ni}) = ${val_ni:,.2f}",
-        f"4. SDE Multiple Method: SDE [EBITDA (${ebitda:,.2f}) + Owner Salary (${owner_salary:,.2f})] = ${sde:,.2f} | SDE (${sde:,.2f}) * Multiple ({mult_sde}) = ${val_sde:,.2f}",
-        f"5. FCF Multiple Method: FCF [EBITDA (${ebitda:,.2f}) - CapEx (${capex:,.2f}) - Taxes (${taxes:,.2f})] = ${fcf:,.2f} | FCF (${fcf:,.2f}) * Multiple ({mult_fcf}) = ${val_fcf:,.2f}"
+        f"Revenue Multiple Method: Annualized Revenue (${revenue:,.2f}) * Multiple ({mult_rev}) = ${val_rev:,.2f}",
+        f"EBITDA Multiple Method: Annualized EBITDA (${ebitda:,.2f}) * Multiple ({mult_ebitda}) = ${val_ebitda:,.2f}",
+        f"Net Income Multiple Method: Annualized Net Income (${net_income:,.2f}) * Multiple ({mult_ni}) = ${val_ni:,.2f}",
+        f"SDE Multiple Method: SDE [EBITDA (${ebitda:,.2f}) + Owner Salary (${owner_salary:,.2f})] = ${sde:,.2f} | SDE (${sde:,.2f}) * Multiple ({mult_sde}) = ${val_sde:,.2f}",
+        f"FCF Multiple Method: FCF [EBITDA (${ebitda:,.2f}) - CapEx (${capex:,.2f}) - Taxes (${taxes:,.2f})] = ${fcf:,.2f} | FCF (${fcf:,.2f}) * Multiple ({mult_fcf}) = ${val_fcf:,.2f}"
     ]
-    
+
     # Custom Method
     if custom_method:
         name = custom_method.get("name", "Custom Formula")
@@ -65,7 +67,7 @@ def calculate_valuation(
         multiplier = custom_method.get("multiplier", 1.0)
         val_custom = metric_val * multiplier
         valuations[name] = val_custom
-        steps.append(f"6. Custom Method '{name}': Metric (${metric_val:,.2f}) * Multiplier ({multiplier}) = ${val_custom:,.2f}")
+        steps.append(f"Custom Method '{name}': Metric (${metric_val:,.2f}) * Multiplier ({multiplier}) = ${val_custom:,.2f}")
         
     # Default active valuation method is EBITDA Multiple for primary summaries
     primary_value = val_ebitda
@@ -104,13 +106,16 @@ def calculate_sensitivity(
     Calculates sensitivity range (+/- range_pct) for a selected valuation method.
     """
     base_val = valuation_result["valuations"].get(method_name, valuation_result["value"])
-    
+
     lower_val = base_val * (1 - range_pct)
     upper_val = base_val * (1 + range_pct)
-    
-    # Generate points for a sensitivity curve
+
+    # Generate points for a sensitivity curve, scaled to the requested +/- range
+    # (previously hardcoded to +/-20% regardless of what the user asked for).
+    steps = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0]
     curve = []
-    for pct in [-0.20, -0.15, -0.10, -0.05, 0.0, 0.05, 0.10, 0.15, 0.20]:
+    for step in steps:
+        pct = step * range_pct
         curve.append({
             "percentage_change": pct,
             "valuation": base_val * (1 + pct)

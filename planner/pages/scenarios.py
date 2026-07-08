@@ -1,6 +1,6 @@
 """Scenario Manager page — create, duplicate, delete, compare scenarios."""
 import dash
-from dash import html, dcc, callback, Input, Output, State, no_update
+from dash import html, dcc, callback, callback_context, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import pandas as pd
@@ -122,7 +122,6 @@ def layout():
     prevent_initial_call=False,
 )
 def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, action_text):
-    from dash import callback_context
     ctx = callback_context
     triggered = ctx.triggered[0]["prop_id"] if ctx.triggered else ""
     action_text = action_text or ""
@@ -158,6 +157,29 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, actio
         }
 
     base_s = quick_summary("Baseline")
+
+    # Comparing Baseline to itself is meaningless (always $+0) — that's not a
+    # bug in the numbers, it just isn't useful to show. Point the user at the
+    # action they need to take instead of a confusing all-zero table.
+    if selected == "Baseline":
+        if len(sc_list) <= 1:
+            hint = ("Click \"Duplicate Active\" or \"Create New\" above to make a second scenario "
+                    "(e.g. \"Hire Engineer\"), then pick it here to see how it changes your numbers.")
+        else:
+            hint = "Pick a different scenario from the dropdown above to compare it against Baseline."
+        comp_table = html.Div(
+            [
+                html.I(className="bi bi-signpost-split display-6 text-muted mb-3 d-block"),
+                html.P("Nothing to compare yet.", className="text-muted mb-1",
+                       style={"fontSize": "0.95rem", "fontWeight": "600"}),
+                html.P(hint, className="text-muted mb-0", style={"fontSize": "0.85rem"}),
+            ],
+            className="text-center py-4",
+        )
+        fig = go.Figure()
+        fig = apply_dark_layout(fig, "Create or select a second scenario to compare")
+        return options, selected, action_text, comp_table, fig
+
     active_s = quick_summary(selected)
 
     rows = [

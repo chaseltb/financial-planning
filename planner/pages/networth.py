@@ -2,12 +2,49 @@
 import dash
 from dash import html, dcc, callback, Input, Output, no_update
 import dash_bootstrap_components as dbc
-import pandas as pd
 
 from planner.components.charts import create_net_worth_trend, create_allocation_chart
 from planner.engines.runner import run_all_engines
 
 dash.register_page(__name__, path="/networth", title="Net Worth")
+
+_ASSET_LEDGER_COLS = [
+    ("category",    "Category",      "text"),
+    ("description", "Description",  "text"),
+    ("value",       "Value",        "money"),
+    ("growth_rate", "Annual Growth", "percent"),
+]
+_LIAB_LEDGER_COLS = [
+    ("category",         "Category",         "text"),
+    ("description",      "Description",      "text"),
+    ("value",            "Balance",          "money"),
+    ("interest_rate",    "Interest Rate",    "percent"),
+    ("monthly_payment",  "Monthly Payment",  "money"),
+]
+
+
+def _render_readonly_ledger(rows, col_spec):
+    """Read-only summary table with the same look as the editable tables
+    elsewhere in the app (Title Case headers, $/% formatting) — this page
+    only displays the ledger; edit it on the Personal Finances page."""
+    def fmt(val, kind):
+        val = float(val or 0)
+        if kind == "money":
+            return f"${val:,.0f}"
+        if kind == "percent":
+            return f"{val * 100:.1f}%"
+        return val
+
+    header = html.Thead(html.Tr([html.Th(label) for _, label, _ in col_spec]))
+    body = html.Tbody([
+        html.Tr([
+            html.Td(fmt(row.get(key, ""), kind) if kind != "text" else row.get(key, ""))
+            for key, _, kind in col_spec
+        ])
+        for row in rows
+    ])
+    return dbc.Table([header, body], striped=True, bordered=False, hover=True,
+                      size="sm", className="text-white mb-0", responsive=True)
 
 
 def layout():
@@ -89,20 +126,20 @@ def populate_networth_page(state):
     debt_alloc = nw["debt_allocation"] if nw["debt_allocation"] else {"No Liabilities": 0}
 
     assets_tbl = [
-        html.Small("Assets Ledger", className="text-muted d-block mb-2"),
-        dbc.Table.from_dataframe(
-            pd.DataFrame(state["assets"])[["category", "description", "value", "growth_rate"]],
-            striped=True, bordered=False, hover=True, size="sm", className="text-white mb-0",
+        html.Small(
+            ["Assets Ledger ", html.A("(edit on Personal Finances)", href="/personal", className="text-muted")],
+            className="text-muted d-block mb-2"
         ),
-    ] if state["assets"] else [html.P("No assets entered.", className="text-muted")]
+        _render_readonly_ledger(state["assets"], _ASSET_LEDGER_COLS),
+    ] if state["assets"] else [html.P("No assets entered yet — add some on the Personal Finances page.", className="text-muted")]
 
     liab_tbl = [
-        html.Small("Liabilities Ledger", className="text-muted d-block mb-2 mt-3"),
-        dbc.Table.from_dataframe(
-            pd.DataFrame(state["liabilities"])[["category", "description", "value", "interest_rate", "monthly_payment"]],
-            striped=True, bordered=False, hover=True, size="sm", className="text-white mb-0",
+        html.Small(
+            ["Liabilities Ledger ", html.A("(edit on Personal Finances)", href="/personal", className="text-muted")],
+            className="text-muted d-block mb-2 mt-3"
         ),
-    ] if state["liabilities"] else [html.P("No liabilities entered.", className="text-muted")]
+        _render_readonly_ledger(state["liabilities"], _LIAB_LEDGER_COLS),
+    ] if state["liabilities"] else [html.P("No liabilities entered yet — add some on the Personal Finances page.", className="text-muted")]
 
     return (
         f"${nw['total_assets']:,.0f}",

@@ -3,6 +3,7 @@
 :root {
     --bg-primary: #0f172a;
     --bg-secondary: #1e293b;
+    --bg-sidebar: #0b0f19;
     --bg-glass: rgba(30, 41, 59, 0.7);
     --border-glass: rgba(255, 255, 255, 0.08);
     --accent-emerald: #10b981;
@@ -12,6 +13,25 @@
     --text-secondary: #94a3b8;
     --font-heading: 'Outfit', sans-serif;
     --font-body: 'Inter', sans-serif;
+}
+
+/* Light theme — toggled by the "Theme Selection" dropdown on the Settings
+   page, applied via a data-theme attribute on <html> (see app.py). Charts and
+   the raw dash_table cell shading keep their current dark-optimized palette;
+   everything else (chrome, cards, inputs, tables) re-themes. */
+:root[data-theme="light"] {
+    --bg-primary: #f1f5f9;
+    --bg-secondary: #ffffff;
+    --bg-sidebar: #ffffff;
+    --bg-glass: rgba(255, 255, 255, 0.85);
+    --border-glass: rgba(15, 23, 42, 0.1);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+}
+
+:root[data-theme="light"] .glass-card,
+:root[data-theme="light"] .sidebar-container {
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08);
 }
 
 body {
@@ -76,7 +96,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Sidebar navigation */
 .sidebar-container {
-    background-color: #0b0f19;
+    background-color: var(--bg-sidebar);
     border-right: 1px solid var(--border-glass);
     height: 100vh;
     padding: 24px 16px;
@@ -157,7 +177,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .dash-spreadsheet-container .dash-spreadsheet th {
-    background-color: #0b0f19 !important;
+    background-color: var(--bg-sidebar) !important;
     color: var(--text-secondary) !important;
     border: 1px solid var(--border-glass) !important;
     font-weight: 600 !important;
@@ -165,7 +185,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Explain panel styling */
 .explain-panel {
-    background: #0b0f19;
+    background: var(--bg-sidebar);
     border-left: 4px solid var(--accent-purple);
     border-radius: 0 12px 12px 0;
     padding: 20px;

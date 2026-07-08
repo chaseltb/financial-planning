@@ -34,15 +34,17 @@ def calculate_nc_tax(
     
     combined_nc_tax = nc_personal_tax + corporate_tax
     
+    # These render inside the same <ol> as the federal steps (see taxes.py /
+    # render_explain_panel), which numbers everything automatically.
     steps = [
-        f"1. NC Starting Income (Federal AGI): ${federal_agi:,.2f}",
-        f"2. NC Standard Deduction: ${std_deduction:,.2f} ({filing_status.capitalize()})",
-        f"3. NC Taxable Income: Starting Income (${federal_agi:,.2f}) - Deduction (${std_deduction:,.2f}) = ${nc_taxable_income:,.2f}",
-        f"4. NC Personal Tax: Taxable Income (${nc_taxable_income:,.2f}) * Flat Rate {flat_rate*100:.2f}% = ${nc_personal_tax:,.2f}"
+        f"NC Starting Income (Federal AGI): ${federal_agi:,.2f}",
+        f"NC Standard Deduction: ${std_deduction:,.2f} ({filing_status.capitalize()})",
+        f"NC Taxable Income: Starting Income (${federal_agi:,.2f}) - Deduction (${std_deduction:,.2f}) = ${nc_taxable_income:,.2f}",
+        f"NC Personal Tax: Taxable Income (${nc_taxable_income:,.2f}) * Flat Rate {flat_rate*100:.2f}% = ${nc_personal_tax:,.2f}"
     ]
     if business_entity.strip() == "C Corporation":
-        steps.append(f"5. NC Corporate Income Tax (C-Corp): Business Profit (${business_net_income:,.2f}) * NC Corporate Rate {corp_rate*100:.2f}% = ${corporate_tax:,.2f}")
-        steps.append(f"6. Combined NC Tax (Personal + Corporate) = ${combined_nc_tax:,.2f}")
+        steps.append(f"NC Corporate Income Tax (C-Corp): Business Profit (${business_net_income:,.2f}) * NC Corporate Rate {corp_rate*100:.2f}% = ${corporate_tax:,.2f}")
+        steps.append(f"Combined NC Tax (Personal + Corporate) = ${combined_nc_tax:,.2f}")
         
     return {
         "value": nc_personal_tax,
