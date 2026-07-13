@@ -26,7 +26,11 @@ app = dash.Dash(
         dbc.themes.SLATE, 
         "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
     ],
-    suppress_callback_exceptions=False,
+    # Several pages (personal, forecast) build tables like "income-table" and
+    # "forecast-spreadsheet" inside a callback rather than the initial layout,
+    # so callbacks that reference them must not be validated against layout at
+    # startup.
+    suppress_callback_exceptions=True,
     update_title=None,
 )
 app.title = "Personal & Business Financial Planner"
