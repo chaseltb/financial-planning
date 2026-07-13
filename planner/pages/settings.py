@@ -179,15 +179,25 @@ def layout():
 
 
 
+# settings-theme/settings-autosave-toggle only exist in the Settings page's own
+# layout, not in the persistent app-wide chrome. A callback whose Outputs mix a
+# page-local target with an always-present one (e.g. theme-store) errors on
+# every other page — Dash only silently skips a callback when ALL of its
+# outputs are absent, not when some resolve and some don't. So each direction
+# below keeps its Output(s) uniformly page-local or uniformly global, and reads
+# the store via State (State isn't part of Dash's cycle graph) gated on
+# Input("url", "pathname") — url and theme-store/autosave-enabled-store are
+# both always present, so this never mixes resolvable and unresolvable Outputs.
 # ─────────────────────────────────────────────────────────────────────────────
-# Callbacks: Theme selection (reflects/updates the shared theme-store)
+# Callback: Theme selection (reflects the shared theme-store on page load/nav)
 # ─────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("settings-theme", "value"),
-    Input("theme-store", "data"),
+    Input("url", "pathname"),
+    State("theme-store", "data"),
     prevent_initial_call=False,
 )
-def sync_theme_dropdown_from_store(theme):
+def populate_theme_dropdown(_pathname, theme):
     return theme or "dark"
 
 
@@ -201,14 +211,15 @@ def sync_theme_store_from_dropdown(theme):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Callbacks: Autosave toggle (reflects/updates the shared autosave-enabled-store)
+# Callback: Autosave toggle (reflects/updates the shared autosave-enabled-store)
 # ─────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("settings-autosave-toggle", "value"),
-    Input("autosave-enabled-store", "data"),
+    Input("url", "pathname"),
+    State("autosave-enabled-store", "data"),
     prevent_initial_call=False,
 )
-def sync_autosave_toggle_from_store(enabled):
+def populate_autosave_toggle(_pathname, enabled):
     return ["autosave"] if enabled is not False else []
 
 
