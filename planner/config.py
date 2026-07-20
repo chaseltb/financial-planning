@@ -21,3 +21,10 @@ THEMES = {
 DEFAULT_TAX_YEAR = 2026
 DEFAULT_STATE = "NC"
 DEFAULT_CURRENCY = "USD"
+
+# The "Baseline" scenario's internal key never changes (scenario diffing,
+# load/save routing, and the "can't rename/delete this one" guards all key
+# off the literal string "Baseline"). This is just the label shown for it
+# anywhere it appears in the UI, since its shipped default data models a
+# median North Carolina household/side-hustle rather than a blank slate.
+BASELINE_DISPLAY_NAME = "NC Median 2024 (Baseline)"

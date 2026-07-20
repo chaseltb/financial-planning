@@ -364,3 +364,24 @@ input.form-control, select.form-select {
         white-space: nowrap;
     }
 }
+
+/* Dash DataTable — editable cell fix. The <input> a cell swaps in while
+   you're typing renders with the browser's own default colors (usually dark
+   text on a white or transparent field), ignoring this app's dark theme.
+   That made the value nearly invisible while editing. Force it to match the
+   same dark background and light text as every other cell. */
+.dash-table-container input,
+.dash-table-container textarea {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    caret-color: #f8fafc !important;
+}
+
+/* The tooltip bubble that appears on column-header hover also inherits
+   default light styling; match it to the rest of the dark UI. */
+.dash-table-tooltip {
+    background-color: #0b0f19 !important;
+    color: #f8fafc !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    font-size: 0.8rem !important;
+}

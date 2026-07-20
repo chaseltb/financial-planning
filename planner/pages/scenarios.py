@@ -6,11 +6,16 @@ import plotly.graph_objects as go
 import pandas as pd
 
 from planner.components.charts import apply_dark_layout
+from planner.config import BASELINE_DISPLAY_NAME
 from planner.data_manager import (
     get_scenarios_list, load_project_state, save_scenario,
     delete_scenario, duplicate_scenario,
 )
 from planner.engines.runner import run_all_engines
+
+
+def _display_label(scenario_name: str) -> str:
+    return BASELINE_DISPLAY_NAME if scenario_name == "Baseline" else scenario_name
 
 dash.register_page(__name__, path="/scenarios", title="Scenarios")
 
@@ -33,12 +38,12 @@ def layout():
                                     className="form-label",
                                 ),
                                 dbc.Tooltip(
-                                    "Pick any scenario to compare its key metrics against the Baseline.",
+                                    f"Pick any scenario to compare its key metrics against {BASELINE_DISPLAY_NAME}.",
                                     target="label-scenarios-compare",
                                 ),
                                 dcc.Dropdown(
                                     id="scenarios-list-dropdown",
-                                    options=[{"label": "Baseline", "value": "Baseline"}],
+                                    options=[{"label": BASELINE_DISPLAY_NAME, "value": "Baseline"}],
                                     value="Baseline",
                                     clearable=False,
                                     className="mb-3",
@@ -142,7 +147,7 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, actio
 
     sc_list = get_scenarios_list()
     selected = selected if selected in sc_list else "Baseline"
-    options = [{"label": s, "value": s} for s in sc_list]
+    options = [{"label": _display_label(s), "value": s} for s in sc_list]
 
     def quick_summary(scenario_name):
         st = load_project_state(scenario_name)
@@ -166,7 +171,7 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, actio
             hint = ("Click \"Duplicate Active\" or \"Create New\" above to make a second scenario "
                     "(e.g. \"Hire Engineer\"), then pick it here to see how it changes your numbers.")
         else:
-            hint = "Pick a different scenario from the dropdown above to compare it against Baseline."
+            hint = f"Pick a different scenario from the dropdown above to compare it against {BASELINE_DISPLAY_NAME}."
         comp_table = html.Div(
             [
                 html.I(className="bi bi-signpost-split display-6 text-muted mb-3 d-block"),
@@ -184,10 +189,10 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, actio
 
     rows = [
         {
-            "Metric":   m,
-            "Baseline": f"${base_s[m]:,.0f}",
-            selected:   f"${active_s[m]:,.0f}",
-            "Δ":        f"${active_s[m] - base_s[m]:+,.0f}",
+            "Metric":            m,
+            BASELINE_DISPLAY_NAME: f"${base_s[m]:,.0f}",
+            selected:            f"${active_s[m]:,.0f}",
+            "Δ":                 f"${active_s[m] - base_s[m]:+,.0f}",
         }
         for m in base_s
     ]
@@ -199,9 +204,9 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, actio
     metrics_list = list(base_s.keys())
     fig = go.Figure()
     fig.add_trace(go.Bar(x=metrics_list, y=[base_s[m] for m in metrics_list],
-                         name="Baseline", marker_color="#3b82f6"))
+                         name=BASELINE_DISPLAY_NAME, marker_color="#3b82f6"))
     fig.add_trace(go.Bar(x=metrics_list, y=[active_s[m] for m in metrics_list],
                          name=selected, marker_color="#8b5cf6"))
-    fig = apply_dark_layout(fig, f"Baseline vs {selected}")
+    fig = apply_dark_layout(fig, f"{BASELINE_DISPLAY_NAME} vs {selected}")
 
     return options, selected, action_text, comp_table, fig
