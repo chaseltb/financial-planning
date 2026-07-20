@@ -24,17 +24,17 @@ NUMERIC_COLS = [
 
 DEFAULT_SEED = {
     "Quarter": "2025-Q4",
-    "Revenue": 15000.0,
+    "Revenue": 2500.0,
     "COGS": 500.0,
-    "Payroll": 250.0,
-    "Expenses": 250.0,
-    "Capital expenditures": 125.0,
-    "Owner salary": 1000.0,
-    "Distributions": 10000.0,
-    "Tax estimate": 12000.0,
-    "Cash": 35000.0,
-    "EBITDA": 55000.0,
-    "Business value": 330000.0,
+    "Payroll": 0.0,
+    "Expenses": 375.0,
+    "Capital expenditures": 50.0,
+    "Owner salary": 0.0,
+    "Distributions": 1600.0,
+    "Tax estimate": 300.0,
+    "Cash": 2000.0,
+    "EBITDA": 1625.0,
+    "Business value": 39000.0,
 }
 
 
@@ -177,13 +177,28 @@ def run_forecast(
             rules=nc_rules
         )
         
-        # Combined annualized tax / 4 to get quarterly tax estimate
+        # "Tax estimate" (displayed/editable) is the owner's full personal tax
+        # bill — personal income tax + SE tax + corporate tax, combined Fed+NC.
+        # It's shown for the owner's reference but must NOT be deducted from
+        # business Cash below: for pass-through entities the owner pays it
+        # personally out of the distributions they already took (deducting it
+        # again here double-counted the same dollars leaving the business,
+        # draining "Cash Available" far faster than actually happens).
         annual_combined_tax = fed_tax_calc["combined_tax"] + nc_tax_calc["combined_tax"]
         tax_estimate = q_overrides.get("Tax estimate", annual_combined_tax / 4.0)
-        
+
+        # Only the business's OWN tax obligations hit business cash: entity-level
+        # corporate tax (C-Corps only) and the employer-side FICA match on W-2
+        # wages (S-Corps/C-Corps). The owner's personal income/SE tax is paid
+        # from money already pulled out via owner_salary/distributions above.
+        annual_business_cash_tax = (
+            fed_tax_calc["corporate_tax"] + nc_tax_calc["corporate_tax"] + fed_tax_calc["employer_payroll_tax"]
+        )
+        business_tax_outflow = annual_business_cash_tax / 4.0
+
         # 3. Project Cash
-        # Cash Flow = Revenue - COGS - Payroll - Expenses - CapEx - Owner salary - Distributions - Tax estimate
-        cash_flow = rev - cogs - payroll - expenses - capex - owner_salary - distributions - tax_estimate
+        # Cash Flow = Revenue - COGS - Payroll - Expenses - CapEx - Owner salary - Distributions - Business-level taxes
+        cash_flow = rev - cogs - payroll - expenses - capex - owner_salary - distributions - business_tax_outflow
         cash = q_overrides.get("Cash", prev_cash + cash_flow)
         
         # 4. Valuation
