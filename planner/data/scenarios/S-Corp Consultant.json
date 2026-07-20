@@ -1,0 +1,8 @@
+{
+  "name": "S-Corp Consultant",
+  "changes": {
+    "business.entity_type": "S Corporation",
+    "business.owner_salary": 40000,
+    "business.ownership_pct": 100
+  }
+}

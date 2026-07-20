@@ -26,5 +26,7 @@ DEFAULT_CURRENCY = "USD"
 # load/save routing, and the "can't rename/delete this one" guards all key
 # off the literal string "Baseline"). This is just the label shown for it
 # anywhere it appears in the UI, since its shipped default data models a
-# median North Carolina household/side-hustle rather than a blank slate.
-BASELINE_DISPLAY_NAME = "NC Median 2024 (Baseline)"
+# median North Carolina personal income (no business) rather than a blank
+# slate. The other starter scenarios (side hustle, junior/senior SWE) are
+# layered on top of this one as diffs — see planner/data/scenarios/.
+BASELINE_DISPLAY_NAME = "NC Median Income 2024 (Baseline)"
