@@ -1,6 +1,0 @@
-id,category,description,amount,frequency,taxable
-inc_1,W-2,Job Salary,75000,Annual,True
-inc_3,Dividends,Index Fund Dividends,3000.0,Annual,True
-inc_4,Interest,High Yield Savings Account,300,Annual,True
-inc_5,Capital gains,Stock Sales,2000,Annual,True
-inc_6,Other,New Source,33,,
