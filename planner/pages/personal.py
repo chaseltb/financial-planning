@@ -312,17 +312,18 @@ def persist_personal_edits(
     Input("income-table-add-btn", "n_clicks"),
     State("project-state-store", "data"),
     State("active-scenario-store", "data"),
+    State("autosave-enabled-store", "data"),
     prevent_initial_call=True,
 )
-def add_income_row(n, state, active_scenario):
+def add_income_row(n, state, active_scenario, autosave_enabled):
     if not n or state is None:
         return no_update, no_update
     new_state = copy.deepcopy(state)
     rows = list(new_state.get("income", []))
     rows.append({"category": "Other", "description": "New Income Source", "amount": 0.0})
     new_state["income"] = rows
-    save_project_state(new_state, active_scenario)
-    return new_state, "● Saved"
+    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
+    return new_state, label
 
 
 @callback(
@@ -331,17 +332,18 @@ def add_income_row(n, state, active_scenario):
     Input("expenses-table-add-btn", "n_clicks"),
     State("project-state-store", "data"),
     State("active-scenario-store", "data"),
+    State("autosave-enabled-store", "data"),
     prevent_initial_call=True,
 )
-def add_expense_row(n, state, active_scenario):
+def add_expense_row(n, state, active_scenario, autosave_enabled):
     if not n or state is None:
         return no_update, no_update
     new_state = copy.deepcopy(state)
     rows = list(new_state.get("expenses", []))
     rows.append({"category": "Other", "description": "New Expense", "amount": 0.0})
     new_state["expenses"] = rows
-    save_project_state(new_state, active_scenario)
-    return new_state, "● Saved"
+    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
+    return new_state, label
 
 
 @callback(
@@ -350,17 +352,18 @@ def add_expense_row(n, state, active_scenario):
     Input("assets-table-add-btn", "n_clicks"),
     State("project-state-store", "data"),
     State("active-scenario-store", "data"),
+    State("autosave-enabled-store", "data"),
     prevent_initial_call=True,
 )
-def add_asset_row(n, state, active_scenario):
+def add_asset_row(n, state, active_scenario, autosave_enabled):
     if not n or state is None:
         return no_update, no_update
     new_state = copy.deepcopy(state)
     rows = list(new_state.get("assets", []))
     rows.append({"category": "Investment", "description": "New Asset", "value": 0.0, "growth_rate": 0.05})
     new_state["assets"] = rows
-    save_project_state(new_state, active_scenario)
-    return new_state, "● Saved"
+    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
+    return new_state, label
 
 
 @callback(
@@ -369,9 +372,10 @@ def add_asset_row(n, state, active_scenario):
     Input("liabilities-table-add-btn", "n_clicks"),
     State("project-state-store", "data"),
     State("active-scenario-store", "data"),
+    State("autosave-enabled-store", "data"),
     prevent_initial_call=True,
 )
-def add_liability_row(n, state, active_scenario):
+def add_liability_row(n, state, active_scenario, autosave_enabled):
     if not n or state is None:
         return no_update, no_update
     new_state = copy.deepcopy(state)
@@ -379,5 +383,5 @@ def add_liability_row(n, state, active_scenario):
     rows.append({"category": "Debt", "description": "New Liability",
                  "value": 0.0, "interest_rate": 0.05, "monthly_payment": 0.0})
     new_state["liabilities"] = rows
-    save_project_state(new_state, active_scenario)
-    return new_state, "● Saved"
+    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
+    return new_state, label

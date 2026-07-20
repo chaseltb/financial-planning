@@ -2,11 +2,36 @@ import os
 import json
 import csv
 import copy
+import logging
+import tempfile
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List
 import pandas as pd
+from dash import html
 
 from planner.config import DATA_DIR, TAX_RULES_DIR, SCENARIOS_DIR, DEFAULT_TAX_YEAR, DEFAULT_STATE
+
+logger = logging.getLogger(__name__)
+
+def _atomic_write(path: Path, write_fn):
+    """Write via a temp file in the same directory, then atomically replace the
+    target. Guards against a crash or interrupted write leaving a truncated /
+    corrupt file on disk (the previous version otherwise wrote straight to the
+    real path, so any failure mid-write destroyed the last good save).
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", newline="", encoding="utf-8") as f:
+            write_fn(f)
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
 
 def load_json(path: Path, default: Dict[str, Any] = None) -> Dict[str, Any]:
     if default is None:
@@ -20,9 +45,7 @@ def load_json(path: Path, default: Dict[str, Any] = None) -> Dict[str, Any]:
         return default
 
 def save_json(path: Path, data: Any):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
+    _atomic_write(path, lambda f: json.dump(data, f, indent=2))
 
 def load_csv(path: Path) -> List[Dict[str, Any]]:
     if not path.exists():
@@ -40,15 +63,16 @@ def load_csv(path: Path) -> List[Dict[str, Any]]:
 def save_csv(path: Path, items: List[Dict[str, Any]], fieldnames: List[str] = None):
     if not items and not fieldnames:
         return
-    path.parent.mkdir(parents=True, exist_ok=True)
     if not fieldnames and items:
         fieldnames = list(items[0].keys())
-    
-    with open(path, "w", newline="", encoding="utf-8") as f:
+
+    def _write(f):
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         for item in items:
             writer.writerow(item)
+
+    _atomic_write(path, _write)
 
 # Scenarios manager
 def get_scenarios_list() -> List[str]:
@@ -104,17 +128,33 @@ def load_project_state(active_scenario: str = "Baseline") -> Dict[str, Any]:
         
     return state
 
+_REQUIRED_STATE_KEYS = [
+    "profile", "business", "assumptions",
+    "income", "expenses", "assets", "liabilities", "forecast",
+]
+
 def save_project_state(state: Dict[str, Any], active_scenario: str = "Baseline"):
+    missing = [k for k in _REQUIRED_STATE_KEYS if k not in state]
+    if missing:
+        raise ValueError(f"Refusing to save: state is missing {', '.join(missing)}")
+
     # If active scenario is baseline, save directly to master files
     if active_scenario == "Baseline":
-        save_json(DATA_DIR / "profile.json", state["profile"])
-        save_json(DATA_DIR / "business.json", state["business"])
-        save_json(DATA_DIR / "assumptions.json", state["assumptions"])
-        save_csv(DATA_DIR / "income.csv", state["income"])
-        save_csv(DATA_DIR / "expenses.csv", state["expenses"])
-        save_csv(DATA_DIR / "assets.csv", state["assets"])
-        save_csv(DATA_DIR / "liabilities.csv", state["liabilities"])
-        save_csv(DATA_DIR / "forecast.csv", state["forecast"])
+        writes = [
+            (save_json, DATA_DIR / "profile.json", state["profile"]),
+            (save_json, DATA_DIR / "business.json", state["business"]),
+            (save_json, DATA_DIR / "assumptions.json", state["assumptions"]),
+            (save_csv, DATA_DIR / "income.csv", state["income"]),
+            (save_csv, DATA_DIR / "expenses.csv", state["expenses"]),
+            (save_csv, DATA_DIR / "assets.csv", state["assets"]),
+            (save_csv, DATA_DIR / "liabilities.csv", state["liabilities"]),
+            (save_csv, DATA_DIR / "forecast.csv", state["forecast"]),
+        ]
+        for save_fn, path, data in writes:
+            try:
+                save_fn(path, data)
+            except Exception as e:
+                raise IOError(f"Failed writing {path.name}: {e}") from e
     else:
         # Save baseline data
         baseline_state = load_project_state("Baseline")
@@ -157,20 +197,31 @@ def save_project_state(state: Dict[str, Any], active_scenario: str = "Baseline")
         }
         save_scenario(active_scenario, scenario)
 
-def save_or_mark_unsaved(state: Dict[str, Any], active_scenario: str, autosave_enabled: Any) -> str:
+def _save_status_span(icon: str, text: str, color: str):
+    return html.Span(
+        [html.I(className=f"bi {icon} me-1"), text],
+        style={"color": color},
+    )
+
+def save_or_mark_unsaved(state: Dict[str, Any], active_scenario: str, autosave_enabled: Any):
     """Persist to disk if autosave is on (the default); otherwise leave the
     edit in-memory only (project-state-store still updates so calculations
     stay live) and tell the user to use the "Save Now" button on Settings.
     Shared by every page's persist-edits callback so the autosave toggle
     actually does something, instead of always saving unconditionally.
+    Returns a colored Dash component (not a plain string) so success, the
+    autosave-off state, and failure are visually distinct at a glance instead
+    of all rendering as the same small gray text.
     """
     if autosave_enabled is False:
-        return "○ Not saved (autosave off)"
+        return _save_status_span("bi-cloud-slash", "Not saved (autosave off)", "var(--text-muted, #94a3b8)")
     try:
         save_project_state(state, active_scenario)
-        return "● Saved"
+        timestamp = datetime.now().strftime("%I:%M:%S %p")
+        return _save_status_span("bi-cloud-check-fill", f"Saved {timestamp}", "var(--accent-emerald, #10b981)")
     except Exception as e:
-        return f"⚠ {e}"
+        logger.exception("Failed to save project state (scenario=%s)", active_scenario)
+        return _save_status_span("bi-exclamation-triangle-fill", f"Save failed: {e}", "var(--accent-red, #ef4444)")
 
 
 def load_tax_rules(year: int = DEFAULT_TAX_YEAR, state_code: str = DEFAULT_STATE) -> Dict[str, Any]:

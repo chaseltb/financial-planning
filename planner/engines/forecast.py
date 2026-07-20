@@ -24,12 +24,12 @@ NUMERIC_COLS = [
 
 DEFAULT_SEED = {
     "Quarter": "2025-Q4",
-    "Revenue": 125000.0,
-    "COGS": 25000.0,
-    "Payroll": 30000.0,
-    "Expenses": 15000.0,
-    "Capital expenditures": 2000.0,
-    "Owner salary": 22500.0,
+    "Revenue": 15000.0,
+    "COGS": 500.0,
+    "Payroll": 250.0,
+    "Expenses": 250.0,
+    "Capital expenditures": 125.0,
+    "Owner salary": 1000.0,
     "Distributions": 10000.0,
     "Tax estimate": 12000.0,
     "Cash": 35000.0,

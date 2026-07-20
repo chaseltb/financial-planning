@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# User financial data — personal/business figures, not for version control
+planner/data/*.csv
+planner/data/*.json
+planner/data/scenarios/*.json

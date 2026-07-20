@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+from datetime import datetime
 
 import dash
 from dash import html, dcc, callback, callback_context, Input, Output, State, no_update
@@ -238,6 +239,7 @@ def sync_autosave_store_from_toggle(toggle_val):
 # ─────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("settings-save-now-status", "children"),
+    Output("save-status-indicator", "children", allow_duplicate=True),
     Input("settings-save-now-btn", "n_clicks"),
     State("project-state-store", "data"),
     State("active-scenario-store", "data"),
@@ -245,12 +247,22 @@ def sync_autosave_store_from_toggle(toggle_val):
 )
 def save_now(n_clicks, state, active_scenario):
     if state is None:
-        return html.Span("Nothing to save yet.", className="text-muted")
+        return html.Span("Nothing to save yet.", className="text-muted"), no_update
     try:
         save_project_state(state, active_scenario)
-        return html.Span("✓ Saved to disk.", style={"color": "#10b981"})
+        timestamp = datetime.now().strftime("%I:%M:%S %p")
+        status = html.Span(f"✓ Saved to disk at {timestamp}.", style={"color": "#10b981"})
+        header_status = html.Span(
+            [html.I(className="bi bi-cloud-check-fill me-1"), f"Saved {timestamp}"],
+            style={"color": "#10b981"},
+        )
     except Exception as e:
-        return html.Span(f"⚠ {e}", style={"color": "#ef4444"})
+        status = html.Span(f"⚠ Save failed: {e}", style={"color": "#ef4444"})
+        header_status = html.Span(
+            [html.I(className="bi bi-exclamation-triangle-fill me-1"), f"Save failed: {e}"],
+            style={"color": "#ef4444"},
+        )
+    return status, header_status
 
 
 # ─────────────────────────────────────────────────────────────────────────────
