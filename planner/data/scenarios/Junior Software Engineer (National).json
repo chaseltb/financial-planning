@@ -1,0 +1,39 @@
+{
+  "name": "Junior Software Engineer (National)",
+  "changes": {
+    "income": [
+      {
+        "id": "inc_1",
+        "category": "W-2",
+        "description": "Job Salary (national median, Junior Software Engineer, Salary.com 2025)",
+        "amount": 82506,
+        "frequency": "Annual",
+        "taxable": "True"
+      },
+      {
+        "id": "inc_3",
+        "category": "Dividends",
+        "description": "Index Fund Dividends",
+        "amount": 150.0,
+        "frequency": "Annual",
+        "taxable": "True"
+      },
+      {
+        "id": "inc_4",
+        "category": "Interest",
+        "description": "High Yield Savings Account",
+        "amount": 130,
+        "frequency": "Annual",
+        "taxable": "True"
+      },
+      {
+        "id": "inc_5",
+        "category": "Capital gains",
+        "description": "Stock Sales",
+        "amount": 0,
+        "frequency": "Annual",
+        "taxable": "True"
+      }
+    ]
+  }
+}
