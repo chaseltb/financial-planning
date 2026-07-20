@@ -1,0 +1,21 @@
+{
+  "name": "NC Median + $10k Side Hustle",
+  "changes": {
+    "forecast": [
+      {
+        "Quarter": "2025-Q4",
+        "Revenue": 2500,
+        "COGS": 500,
+        "Payroll": 0,
+        "Expenses": 375,
+        "Capital expenditures": 50,
+        "Owner salary": 0.0,
+        "Distributions": 1600.0,
+        "Tax estimate": 300.0,
+        "Cash": 2000.0,
+        "EBITDA": 1625,
+        "Business value": 39000
+      }
+    ]
+  }
+}

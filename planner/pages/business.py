@@ -19,9 +19,10 @@ def layout():
             dbc.Alert(
                 [
                     html.I(className="bi bi-info-circle me-2"),
-                    "The default $10k/yr revenue and expenses here are an example small side-hustle "
-                    "scenario, not Census or industry data (unlike the Personal page's defaults). "
-                    "Replace them with your own business numbers below.",
+                    "The Baseline scenario has no business activity by default. Switch to the "
+                    "\"NC Median + $10k Side Hustle\" scenario (top of the page) to see an example "
+                    "small side-hustle business filled in here, an assumption, not Census or "
+                    "industry data. Replace any of these numbers with your own below.",
                 ],
                 color="secondary",
                 className="mb-3",
