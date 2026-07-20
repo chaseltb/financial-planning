@@ -1,7 +1,7 @@
 id,category,description,amount,frequency
-exp_1,Housing,Rent (NC median gross rent),14400,Annual
+exp_1,Housing,"Rent (NC median gross rent, Census ACS 2023)",14400,Annual
 exp_2,Food,Groceries & Dining Out,6000,Annual
-exp_3,Transportation,Car Payment/Insurance/Gas,9968,Annual
-exp_4,Utilities,Electric/Water/Internet/Phone,2400,Annual
-exp_6,Healthcare,Insurance Premiums & Out-of-Pocket,3600,Annual
+exp_3,Transportation,"Car Payment/Insurance/Gas (NC avg, NC Commerce/BLS 2024)",9968,Annual
+exp_4,Utilities,Electric/Water/Internet/Phone (est.),2400,Annual
+exp_6,Healthcare,Insurance Premiums & Out-of-Pocket (est.),3600,Annual
 exp_5,Entertainment,Travel & Leisure,1000,Annual

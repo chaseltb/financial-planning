@@ -13,6 +13,7 @@ from dash import html, dcc, Input, Output, State, callback_context
 import dash_bootstrap_components as dbc
 
 from planner.data_manager import load_project_state, get_scenarios_list
+from planner.config import BASELINE_DISPLAY_NAME
 from planner.components.sidebar import render_sidebar
 from planner.components.header import render_header
 
@@ -177,7 +178,10 @@ def sync_scenario_and_state(dropdown_val, active_scenario):
         current_scenario = active_scenario
 
     scenario_list = get_scenarios_list()
-    options = [{"label": s, "value": s} for s in scenario_list]
+    options = [
+        {"label": BASELINE_DISPLAY_NAME if s == "Baseline" else s, "value": s}
+        for s in scenario_list
+    ]
 
     state = load_project_state(current_scenario)
 
