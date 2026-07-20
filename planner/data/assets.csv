@@ -1,5 +1,5 @@
 id,category,description,value,growth_rate
 ast_1,Cash,Emergency Savings (HYSA),3000,0.02
 ast_2,Brokerage,Index Funds,5000,0.07
-ast_3,Retirement,Traditional 401k,38176,0.07
+ast_3,Retirement,"Traditional 401k (median 401k balance, Fidelity/Empower 2024)",38176,0.07
 ast_6,Crypto,Bitcoin Portfolio,500,0.15

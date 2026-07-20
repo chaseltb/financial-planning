@@ -16,6 +16,17 @@ dash.register_page(__name__, path="/business", title="Business Planning")
 def layout():
     return dbc.Container(
         [
+            dbc.Alert(
+                [
+                    html.I(className="bi bi-info-circle me-2"),
+                    "The default $10k/yr revenue and expenses here are an example small side-hustle "
+                    "scenario, not Census or industry data (unlike the Personal page's defaults). "
+                    "Replace them with your own business numbers below.",
+                ],
+                color="secondary",
+                className="mb-3",
+                style={"fontSize": "0.85rem"},
+            ),
             dbc.Row(
                 [
                     dbc.Col(
