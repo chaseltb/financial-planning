@@ -1,0 +1,8 @@
+{
+  "name": "Multi-Member LLC (50% Partner)",
+  "changes": {
+    "business.entity_type": "Multi-member LLC",
+    "business.owner_salary": 0,
+    "business.ownership_pct": 50
+  }
+}
