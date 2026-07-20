@@ -5,6 +5,8 @@ Contains the scenario dropdown and save status indicator.
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 
+from planner.config import BASELINE_DISPLAY_NAME
+
 
 def render_header():
     """
@@ -45,7 +47,7 @@ def render_header():
                     html.Span("Scenario:", className="text-muted me-2", style={"fontSize": "0.9rem"}),
                     dcc.Dropdown(
                         id="header-scenario-dropdown",
-                        options=[{"label": "Baseline", "value": "Baseline"}],
+                        options=[{"label": BASELINE_DISPLAY_NAME, "value": "Baseline"}],
                         value="Baseline",
                         clearable=False,
                         style={"width": "180px", "display": "inline-block", "color": "#0f172a"},

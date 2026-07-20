@@ -7,6 +7,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 
 from planner.components.editable_table import render_editable_table
+from planner.components.citations import render_citation_panel
 from planner.data_manager import save_or_mark_unsaved
 
 dash.register_page(__name__, path="/personal", title="Personal Finances")
@@ -39,6 +40,7 @@ _LIAB_COLS = [
 def layout():
     return dbc.Container(
         [
+            render_citation_panel(),
             dbc.Row(
                 [
                     dbc.Col(
@@ -78,7 +80,12 @@ def layout():
                                     ],
                                     className="mb-3"
                                 ),
-                                dbc.Tooltip("Individual employee 401(k) contribution limit for 2026 is $23,500 (plus $7,500 catch-up if 50+).", target="label-401k"),
+                                dbc.Tooltip(
+                                    "Individual employee 401(k) contribution limit for 2026 is $23,500 (plus $7,500 "
+                                    "catch-up if 50+). The default here ($2,700/yr) is 7% of the median NC salary, "
+                                    "the typical employee contribution rate reported by Fidelity (2024).",
+                                    target="label-401k",
+                                ),
                                 
                                 html.Label(
                                     [html.I(className="bi bi-info-circle me-1 text-muted"), "IRA Contribution"],
@@ -95,7 +102,12 @@ def layout():
                                     ],
                                     className="mb-3"
                                 ),
-                                dbc.Tooltip("Traditional/Roth IRA contribution limit for 2026 is $7,000 (plus $1,000 catch-up if 50+).", target="label-ira"),
+                                dbc.Tooltip(
+                                    "Traditional/Roth IRA contribution limit for 2026 is $7,000 (plus $1,000 "
+                                    "catch-up if 50+). The default here ($2,000/yr) is a modest planning assumption, "
+                                    "not from a specific cited source.",
+                                    target="label-ira",
+                                ),
                                 
                                 html.Label(
                                     [html.I(className="bi bi-info-circle me-1 text-muted"), "HSA Contribution"],
@@ -195,6 +207,16 @@ def layout():
         ],
         fluid=True,
     )
+
+
+@callback(
+    Output("nc-median-citations-collapse", "is_open"),
+    Input("nc-median-citations-toggle", "n_clicks"),
+    State("nc-median-citations-collapse", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_citations_panel(n_clicks, is_open):
+    return not is_open
 
 
 @callback(
