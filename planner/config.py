@@ -22,11 +22,9 @@ DEFAULT_TAX_YEAR = 2026
 DEFAULT_STATE = "NC"
 DEFAULT_CURRENCY = "USD"
 
-# The "Baseline" scenario's internal key never changes (scenario diffing,
-# load/save routing, and the "can't rename/delete this one" guards all key
-# off the literal string "Baseline"). This is just the label shown for it
-# anywhere it appears in the UI, since its shipped default data models a
-# median North Carolina personal income (no business) rather than a blank
-# slate. The other starter scenarios (side hustle, junior/senior SWE) are
+# "Baseline" scenario's internal key never changes (scenario diffing,
+# load/save routing, and "can't rename/delete" guards literal string "Baseline").
+# The default data models a median NC personal income (no business) instead of
+# starting at zero. Other starter scenarios (side hustle, junior/senior SWE) are
 # layered on top of this one as diffs — see planner/data/scenarios/.
 BASELINE_DISPLAY_NAME = "NC Median Income 2024 (Baseline)"
