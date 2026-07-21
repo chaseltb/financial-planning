@@ -8,11 +8,7 @@ def calculate_nc_tax(
     filing_status: str,
     rules: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """
-    Calculates North Carolina state income tax.
-    NC starts with Federal AGI, applies the NC standard deduction, and taxes the remainder at a flat rate (3.99% in 2026).
-    NC has a flat tax for both ordinary income and capital gains.
-    """
+    """Calculates North Carolina state income tax: Federal AGI minus NC standard deduction, taxed at a flat rate."""
     flat_rate = rules.get("flat_rate", 0.0399)
     corp_rate = rules.get("corporate_rate", 0.025)
     
@@ -24,9 +20,7 @@ def calculate_nc_tax(
     if business_entity.strip() == "C Corporation":
         corporate_tax = max(0.0, business_net_income) * corp_rate
         
-    # NC Personal taxable income = Federal AGI - NC Standard Deduction
-    # Note: In reality, there are minor adjustments (e.g. add back state bond interest, subtract federal bond interest).
-    # For MVP, we will assume NC Taxable Income is Federal AGI - NC Standard Deduction.
+    # Simplified: ignores minor real-world NC adjustments (e.g. bond interest add-backs).
     nc_taxable_income = max(0.0, federal_agi - std_deduction)
     
     # Calculate state income tax
