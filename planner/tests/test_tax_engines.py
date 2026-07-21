@@ -1,6 +1,6 @@
 import pytest
 from planner.engines.tax.payroll import calculate_payroll_tax, calculate_self_employment_tax
-from planner.engines.tax.federal import calculate_federal_tax, calculate_bracket_tax
+from planner.engines.tax.federal import calculate_federal_tax, calculate_bracket_tax, calculate_cap_gains_tax
 from planner.engines.tax.north_carolina import calculate_nc_tax
 
 # Dummy tax rules for test
