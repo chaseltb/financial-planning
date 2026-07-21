@@ -1,4 +1,4 @@
-"""Persistent app header — rendered once in app.layout (not per-page)."""
+"""Persistent app header, rendered once in app.layout (not per-page)."""
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 

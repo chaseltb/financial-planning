@@ -1,4 +1,4 @@
-"""Main Dash application — entry point, layout, and globally-persistent callbacks."""
+"""Main Dash application: entry point, layout, and globally-persistent callbacks."""
 import dash
 from dash import html, dcc, Input, Output, State, callback_context
 import dash_bootstrap_components as dbc
