@@ -15,11 +15,7 @@ from planner.config import DATA_DIR, TAX_RULES_DIR, SCENARIOS_DIR, DEFAULT_TAX_Y
 logger = logging.getLogger(__name__)
 
 def _atomic_write(path: Path, write_fn):
-    """Write via a temp file in the same directory, then atomically replace the
-    target. Guards against a crash or interrupted write leaving a truncated /
-    corrupt file on disk (the previous version otherwise wrote straight to the
-    real path, so any failure mid-write destroyed the last good save).
-    """
+    """Writes to a temp file then renames, so a crash mid-write can't corrupt the target."""
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.", suffix=".tmp")
     try:
@@ -204,15 +200,7 @@ def _save_status_span(icon: str, text: str, color: str):
     )
 
 def save_or_mark_unsaved(state: Dict[str, Any], active_scenario: str, autosave_enabled: Any):
-    """Persist to disk if autosave is on (the default); otherwise leave the
-    edit in-memory only (project-state-store still updates so calculations
-    stay live) and tell the user to use the "Save Now" button on Settings.
-    Shared by every page's persist-edits callback so the autosave toggle
-    actually does something, instead of always saving unconditionally.
-    Returns a colored Dash component (not a plain string) so success, the
-    autosave-off state, and failure are visually distinct at a glance instead
-    of all rendering as the same small gray text.
-    """
+    """Persists to disk only if autosave is on; otherwise leaves the edit in-memory only."""
     if autosave_enabled is False:
         return _save_status_span("bi-cloud-slash", "Not saved (autosave off)", "var(--text-muted, #94a3b8)")
     try:
