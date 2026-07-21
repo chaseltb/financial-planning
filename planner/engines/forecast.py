@@ -172,9 +172,8 @@ def run_forecast(
             rules=nc_rules
         )
         
-        # "Tax estimate" is the owner's full personal+business tax bill, shown for reference only —
-        # it must NOT be deducted from business Cash below, since pass-through owners already pay it
-        # personally out of distributions (deducting it again here would double-count).
+        # "Tax estimate" is shown for reference only, not deducted from business Cash below:
+        # pass-through owners already pay it personally out of distributions.
         annual_combined_tax = fed_tax_calc["combined_tax"] + nc_tax_calc["combined_tax"]
         tax_estimate = q_overrides.get("Tax estimate", annual_combined_tax / 4.0)
 
