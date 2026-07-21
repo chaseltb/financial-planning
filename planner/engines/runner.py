@@ -1,9 +1,4 @@
-"""
-Shared calculation runner used by every page callback.
-
-All page callbacks import `run_all_engines` from here so the logic is
-defined once and engines are only invoked on demand.
-"""
+"""Shared calculation runner used by every page callback."""
 from typing import Dict, Any
 import pandas as pd
 
@@ -52,11 +47,7 @@ def run_all_engines(
     forecast_df = forecast_results["forecast_df"]
     only_forecast_df = forecast_results["only_forecast_df"]
 
-    # "recent_q" is the forward-projected quarter (horizon quarters out) — used only
-    # for explicitly quarter-labeled, forward-looking displays (e.g. "Cash at End of
-    # 2027-Q4"). Current-state figures (EBITDA, revenue, tax) must use the actual
-    # latest ACTUAL quarter instead, or every number on the app would silently be a
-    # multi-year-out projection instead of "now".
+    # recent_q is the forward-projected quarter; current-state figures must use current_q instead, or they'd silently be a future projection.
     recent_q = forecast_df.iloc[-1]
     current_q = forecast_results["history_df"].iloc[-1]
     ebitda_q = float(current_q["EBITDA"])
@@ -65,9 +56,7 @@ def run_all_engines(
 
     owner_salary = float(state["business"].get("owner_salary", 0.0))
     entity_type = state["business"].get("entity_type", "Sole Proprietorship")
-    # Only S-Corps/C-Corps can legally run payroll and pay the owner W-2 wages.
-    # Sole proprietors and LLC members take an owner's draw instead — their full net
-    # profit stays subject to self-employment tax, so "owner salary" doesn't apply.
+    # Only S-Corps/C-Corps can legally run payroll for the owner; others take a draw instead.
     owner_w2_salary = owner_salary if entity_type in ("S Corporation", "C Corporation") else 0.0
     ownership_pct = max(0.0, min(1.0, float(state["business"].get("ownership_pct", 100.0)) / 100.0))
     filing_status = state["profile"].get("filing_status", "single")

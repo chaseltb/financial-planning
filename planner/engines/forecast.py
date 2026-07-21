@@ -132,15 +132,10 @@ def run_forecast(
         # Only apply the owner-salary payroll deduction for entities that can actually run payroll.
         owner_salary = raw_owner_salary if entity_pays_owner_w2 else 0.0
 
-        # Calculate EBITDA
         ebitda = rev - cogs - payroll - expenses
 
         # 2. Estimate taxes dynamically using engines
-        # Business net profit for the quarter (quarterly profit before tax and owner salary for pass-throughs,
-        # but for S-Corp/C-Corp, owner salary is an expense reducing business net profit)
-        # Note: EBITDA is revenue - cogs - payroll - expenses.
-        # Payroll usually includes standard employee payroll. Owner salary is separate or part of payroll.
-        # Let's assume payroll does NOT include owner salary, so business net income = EBITDA - Owner Salary.
+        # Payroll is assumed not to include owner salary, so net income = EBITDA - Owner Salary.
         net_biz_income_quarter = ebitda - owner_salary
 
         # Distributions = this owner's pro-rata share of net income, assumed fully paid
@@ -177,20 +172,13 @@ def run_forecast(
             rules=nc_rules
         )
         
-        # "Tax estimate" (displayed/editable) is the owner's full personal tax
-        # bill — personal income tax + SE tax + corporate tax, combined Fed+NC.
-        # It's shown for the owner's reference but must NOT be deducted from
-        # business Cash below: for pass-through entities the owner pays it
-        # personally out of the distributions they already took (deducting it
-        # again here double-counted the same dollars leaving the business,
-        # draining "Cash Available" far faster than actually happens).
+        # "Tax estimate" is the owner's full personal+business tax bill, shown for reference only —
+        # it must NOT be deducted from business Cash below, since pass-through owners already pay it
+        # personally out of distributions (deducting it again here would double-count).
         annual_combined_tax = fed_tax_calc["combined_tax"] + nc_tax_calc["combined_tax"]
         tax_estimate = q_overrides.get("Tax estimate", annual_combined_tax / 4.0)
 
-        # Only the business's OWN tax obligations hit business cash: entity-level
-        # corporate tax (C-Corps only) and the employer-side FICA match on W-2
-        # wages (S-Corps/C-Corps). The owner's personal income/SE tax is paid
-        # from money already pulled out via owner_salary/distributions above.
+        # Only the business's own tax obligations (corporate tax, employer FICA match) hit business cash.
         annual_business_cash_tax = (
             fed_tax_calc["corporate_tax"] + nc_tax_calc["corporate_tax"] + fed_tax_calc["employer_payroll_tax"]
         )
