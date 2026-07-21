@@ -1,6 +1,6 @@
-# NC Personal & Business Financial Planner
+# Personal & Business Financial Planner
 
-A local, private tool for tracking your personal finances and a small business side by side. It estimates federal and North Carolina taxes, projects cash flow, tracks net worth, and lets you compare "what if" scenarios. Everything runs on your own machine. Nothing is sent anywhere.
+A local, private tool for tracking your personal finances and a small business side by side. It estimates federal and state taxes (just for North Carolina for now), projects cash flow, tracks net worth, and lets you compare "what if" scenarios. Everything runs on your own machine. This app allows you to compare your finances to different circumstances, such as the median income, the average income for a Software Engineer, etc. THis is not financial advice.
 
 ## What you need first
 
