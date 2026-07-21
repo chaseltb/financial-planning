@@ -335,9 +335,6 @@ def populate_business_page(state):
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Callback: Persist edits from this page's business inputs
-# ─────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("project-state-store", "data", allow_duplicate=True),
     Output("save-status-indicator", "children", allow_duplicate=True),
@@ -383,10 +380,6 @@ def persist_business_edits(biz_vals, biz_ids, current_state, active_scenario, au
     return new_state, label
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Callback: Populate this page's revenue/expense inputs from the latest
-#           historical forecast quarter (annualized)
-# ─────────────────────────────────────────────────────────────────────────────
 @callback(
     Output({"type": "business-financials-input", "field": "revenue"},  "value"),
     Output({"type": "business-financials-input", "field": "cogs"},     "value"),
@@ -412,10 +405,6 @@ def populate_business_financials(state):
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Callback: Persist edits from this page's revenue/expense inputs into the
-#           latest historical forecast quarter
-# ─────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("project-state-store", "data", allow_duplicate=True),
     Output("save-status-indicator", "children", allow_duplicate=True),
