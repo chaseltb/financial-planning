@@ -122,9 +122,6 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .sidebar-nav-link {
-    /* Bootswatch SLATE puts a skeuomorphic gradient on .nav-link as a
-       background-image (separate from background-color) — kill both, plus
-       its border, or the "transparent" background-color alone has no effect. */
     background-color: transparent !important;
     background-image: none !important;
     border: none !important;
@@ -293,13 +290,7 @@ input.form-control, select.form-select {
     filter: none !important;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Mobile layout
-   The sidebar was a fixed 260px column with no collapse behavior, so on a
-   phone-width screen it squeezed the entire app into a useless sliver and
-   the dollar-sign/suffix decorations in .input-group wrapped onto their own
-   lines, leaving the actual editable number field with no visible width.
-   ───────────────────────────────────────────────────────────────────────── */
+/* Mobile layout: sidebar is collapsible */
 .mobile-nav-toggle-btn {
     display: none;
 }
