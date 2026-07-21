@@ -186,9 +186,6 @@ def populate_forecast_page(state, horizon):
     return spreadsheet, fig_op, fig_cash
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Callback: Forecast horizon dropdown → store (page-local control)
-# ─────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("forecast-horizon-store", "data"),
     Input("forecast-horizon-dropdown", "value"),
@@ -198,9 +195,6 @@ def update_horizon_store(val):
     return val or 8
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Callback: Persist edits from this page's forecast spreadsheet
-# ─────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("project-state-store", "data", allow_duplicate=True),
     Output("save-status-indicator", "children", allow_duplicate=True),

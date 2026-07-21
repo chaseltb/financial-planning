@@ -250,9 +250,6 @@ def populate_personal_page(state):
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Callback: Persist edits from this page's profile inputs & tables
-# ─────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("project-state-store", "data", allow_duplicate=True),
     Output("save-status-indicator", "children", allow_duplicate=True),
@@ -321,13 +318,6 @@ def persist_personal_edits(
     return new_state, label
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Callbacks: Add rows to this page's editable tables
-# ─────────────────────────────────────────────────────────────────────────────
-# ─────────────────────────────────────────────────────────────────────────────
-# Add-row callbacks: output to project-state-store so the container re-renders
-# with a real DataTable that the user can then edit.
-# ─────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("project-state-store", "data", allow_duplicate=True),
     Output("save-status-indicator", "children", allow_duplicate=True),

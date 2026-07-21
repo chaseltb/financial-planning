@@ -163,9 +163,7 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, actio
 
     base_s = quick_summary("Baseline")
 
-    # Comparing Baseline to itself is meaningless (always $+0) — that's not a
-    # bug in the numbers, it just isn't useful to show. Point the user at the
-    # action they need to take instead of a confusing all-zero table.
+    # Comparing Baseline to itself is always $+0, so show a hint instead of an all-zero table.
     if selected == "Baseline":
         if len(sc_list) <= 1:
             hint = ("Click \"Duplicate Active\" or \"Create New\" above to make a second scenario "
