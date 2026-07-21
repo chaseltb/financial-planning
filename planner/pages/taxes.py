@@ -132,9 +132,6 @@ def populate_taxes_page(state):
     combined = r["combined_tax"]
     effective = r["effective_rate"]
 
-    # Bracket visualizer — show how far taxable ordinary income has filled each
-    # bracket: 0% if not yet reached, a partial fill for the bracket currently
-    # being taxed, and 100% for brackets fully passed through.
     rules = r["fed_rules"]
     brackets = sorted(rules.get("brackets", {}).get(filing, []), key=lambda x: x["threshold"])
     taxable = fed.get("taxable_income", 0.0)
