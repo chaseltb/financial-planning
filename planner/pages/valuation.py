@@ -279,9 +279,6 @@ def populate_valuation_page(state, stored_method, stored_range, dropdown_method,
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Callback: Persist edits from this page's valuation inputs
-# ─────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("project-state-store", "data", allow_duplicate=True),
     Output("save-status-indicator", "children", allow_duplicate=True),
@@ -328,9 +325,6 @@ def persist_valuation_edits(val_vals, val_ids, current_state, active_scenario, a
     return new_state, label
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Callback: Sensitivity method/range inputs → stores (page-local controls)
-# ─────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("sensitivity-method-store", "data"),
     Input("valuation-sensitivity-method", "value"),
