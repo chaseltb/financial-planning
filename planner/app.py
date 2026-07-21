@@ -1,13 +1,4 @@
-"""
-NC Personal & Business Financial Planning Platform
-Main Dash application — entry point, layout, and globally-persistent callbacks.
-
-Architecture:
-  - app.layout holds ALL persistent DOM nodes (stores, sidebar, header).
-  - Page layouts contain only page-specific DOM.
-  - app.py callbacks only reference IDs that are ALWAYS in the layout.
-  - Page-specific callbacks live inside each page file using @dash.callback.
-"""
+"""Main Dash application — entry point, layout, and globally-persistent callbacks."""
 import dash
 from dash import html, dcc, Input, Output, State, callback_context
 import dash_bootstrap_components as dbc
@@ -17,9 +8,6 @@ from planner.config import BASELINE_DISPLAY_NAME
 from planner.components.sidebar import render_sidebar
 from planner.components.header import render_header
 
-# ─────────────────────────────────────────────────────────────────────────────
-# App init
-# ─────────────────────────────────────────────────────────────────────────────
 app = dash.Dash(
     __name__,
     use_pages=True,
@@ -27,41 +15,30 @@ app = dash.Dash(
         dbc.themes.SLATE, 
         "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
     ],
-    # Several pages (personal, forecast) build tables like "income-table" and
-    # "forecast-spreadsheet" inside a callback rather than the initial layout,
-    # so callbacks that reference them must not be validated against layout at
-    # startup.
+    # Some page tables are built inside callbacks rather than the initial layout.
     suppress_callback_exceptions=True,
     update_title=None,
 )
 app.title = "Personal & Business Financial Planner"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Root layout — ALL persistent IDs live here, not in pages
-# ─────────────────────────────────────────────────────────────────────────────
+# All persistent IDs live here, not in individual pages.
 app.layout = html.Div(
     [
         dcc.Location(id="url", refresh=False),
-        # ── Persistent session stores ──────────────────────────────────────
         dcc.Store(id="project-state-store", storage_type="session"),
         dcc.Store(id="active-scenario-store", data="Baseline", storage_type="session"),
         dcc.Store(id="explain-target-store", data="combined_tax", storage_type="session"),
-        # Settings stores consumed by page callbacks
         dcc.Store(id="forecast-horizon-store", data=8, storage_type="session"),
         dcc.Store(id="sensitivity-method-store", data="EBITDA Multiple", storage_type="session"),
         dcc.Store(id="sensitivity-range-store", data=0.20, storage_type="session"),
-        # Display/behavior preferences set on the Settings page — persisted in the
-        # browser (not the JSON backend) since they're this device's UI prefs.
+        # Theme/autosave prefs persist in the browser, not the JSON backend, since they're device-local.
         dcc.Store(id="theme-store", data="dark", storage_type="local"),
         dcc.Store(id="autosave-enabled-store", data=True, storage_type="local"),
         dcc.Store(id="mobile-nav-open-store", data=False),
         html.Div(id="theme-applier", style={"display": "none"}),
 
-        # ── Chrome (always visible) ────────────────────────────────────────
         render_sidebar(),
-        # Tap-outside-to-close overlay for the mobile nav drawer — a sibling of
-        # the sidebar (not nested inside it), since the sidebar gets a CSS
-        # `transform` for its slide-in animation, and that creates a new
+        # Sibling of the sidebar, not nested: the sidebar's CSS `transform` creates a
         # containing block that would break a nested `position: fixed` child.
         html.Div(id="mobile-nav-backdrop", n_clicks=0, className="mobile-nav-backdrop"),
         html.Div(
@@ -74,8 +51,7 @@ app.layout = html.Div(
     ]
 )
 
-# Applies the chosen theme to <html data-theme="..."> so CSS variable overrides
-# in assets/styles.css take effect immediately, including on first load.
+# Applies the theme to <html data-theme="..."> so CSS variable overrides in assets/styles.css take effect.
 app.clientside_callback(
     """
     function(theme) {
@@ -87,11 +63,8 @@ app.clientside_callback(
     Input("theme-store", "data"),
 )
 
-# Mobile nav drawer: the hamburger button toggles it open/closed; navigating to
-# a new page or tapping the backdrop always closes it (whichever fired last
-# wins, since this reads current state from the store rather than counting
-# clicks — a plain odd/even click count breaks once a second closing trigger
-# is mixed in).
+# Reads current state rather than toggling a click count, since a plain odd/even
+# count breaks once a second closing trigger (nav or backdrop) is mixed in.
 app.clientside_callback(
     """
     function(toggleClicks, pathname, backdropClicks, isOpen) {
@@ -126,9 +99,6 @@ app.clientside_callback(
 )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Callback: Update page title dynamically
-# ─────────────────────────────────────────────────────────────────────────────
 @app.callback(
     Output("page-title", "children"),
     Input("url", "pathname")
@@ -149,11 +119,7 @@ def update_page_title(pathname):
 
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Callback: Synchronize scenario state and dropdown
-#           Combines inputs and outputs for active-scenario-store and header-scenario-dropdown
-#           to prevent any static dependency cycles.
-# ─────────────────────────────────────────────────────────────────────────────
+# Combines inputs/outputs for active-scenario-store and header-scenario-dropdown to avoid a dependency cycle.
 @app.callback(
     Output("project-state-store", "data"),
     Output("header-scenario-dropdown", "options"),
@@ -189,8 +155,5 @@ def sync_scenario_and_state(dropdown_val, active_scenario):
 
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Entry point
-# ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     app.run(debug=True, port=8050)
