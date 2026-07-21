@@ -38,3 +38,25 @@ def test_projection():
     # Q1 Net Worth = 10100 - 1400 = 8700
     assert pytest.approx(proj[1]["Net Worth"]) == 8700.0
 
+
+def test_net_worth_empty_portfolio():
+    res = calculate_net_worth([], [])
+
+    assert res["total_assets"] == 0.0
+    assert res["total_liabilities"] == 0.0
+    assert res["value"] == 0.0
+    assert res["asset_pct"] == {}
+    assert res["debt_pct"] == {}
+
+
+def test_net_worth_negative_when_debt_exceeds_assets():
+    assets = [{"category": "Cash", "description": "Savings", "value": 5000.0, "growth_rate": 0.0}]
+    liabilities = [
+        {"category": "Student loans", "description": "Loan", "value": 30000.0,
+         "interest_rate": 0.05, "monthly_payment": 300.0}
+    ]
+
+    res = calculate_net_worth(assets, liabilities)
+
+    assert res["value"] == -25000.0
+
