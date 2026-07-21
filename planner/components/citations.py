@@ -1,9 +1,4 @@
-"""Collapsible "where these numbers come from" panel.
-
-Used on pages whose default data models a real-world median rather than a
-blank slate (Personal), so the source of each figure is visible in the UI
-instead of only living in a commit message or a data file's description.
-"""
+"""Collapsible "where these numbers come from" panel."""
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 
@@ -20,8 +15,7 @@ NC_MEDIAN_SOURCES = [
     ("Senior Software Engineer salary (national)", "$125,720/yr", "Salary.com", "2025"),
 ]
 
-# Figures with no single authoritative source — flagged separately so they
-# aren't presented with the same certainty as the cited ones above.
+# Figures with no single authoritative source.
 ESTIMATED_ITEMS = [
     "Utilities and healthcare costs (reasonable estimates, not from a single dataset)",
     "IRA contribution amount (a modest, round-number assumption)",
