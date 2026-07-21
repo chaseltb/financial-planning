@@ -65,18 +65,18 @@ The sidebar has one page per topic:
 - **Net Worth**: Your assets minus your debts, tracked and projected over time.
 - **Valuation**: Estimates of what your business is worth, using a few different methods.
 - **Forecast**: An editable spreadsheet projecting your business forward, quarter by quarter.
-- **Scenarios**: Save alternate versions of your plan (for example, "what if I hire someone") without losing your baseline numbers.
+- **Scenarios**: Save alternate versions of your plan (for example, "what if I get a raise" or "what if I start a business") without losing your baseline numbers.
 - **Settings**: Tax year, state, theme, autosave, and backup import/export.
 
 ## Using it correctly
 
 - **Start on the Personal and Business pages.** Fill in your income, expenses, assets, debts, and business numbers. The app ships with example default values (based on North Carolina median figures) so you can see how it works before you enter your own.
-- **Check the Taxes page** if a number looks off. Every tax estimation has an explanation panel showing the formula and inputs behind it.
+- **Check the Taxes page** if a number looks off. Every tax estimation has an explanation panel showing the formula and inputs behind it. If you notice an issue, feel free to fix it and create a PR.
 - **Turn on Autosave** (on by default) if you want every edit written to disk right away. You can turn it off in Settings and use the "Save Now" button instead if you'd rather control exactly when your data is saved.
 - **Watch the save status indicator** near the top of the screen. It shows a green check when your changes are saved, and a warning if a save fails.
-- **Use Scenarios to experiment.** Anything you want to test (a raise, a new hire, a different tax year) can live in its own scenario so your baseline numbers stay untouched.
+- **Use Scenarios to experiment.** Anything you want to test (a raise, a new hire, a new business, a different tax year) can live in its own scenario so your baseline numbers stay untouched.
 - **Export a backup** from Settings before making big changes, so you always have a copy of your data you can restore from.
 
 ## About your data
 
-All of your financial information is stored in plain JSON and CSV files inside `planner/data/`. Nothing leaves your computer. This folder is intentionally left out of version control (see `.gitignore`), so your personal numbers are never accidentally shared or uploaded.
+All of your financial information is stored in plain JSON and CSV files inside `planner/data/`. Nothing leaves your computer. This folder is intentionally left out of version control (see `.gitignore`), so your personal numbers are never accidentally shared or uploaded. The median values for comparison are all from the same year and are estimates. 
