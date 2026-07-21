@@ -7,9 +7,7 @@ from typing import List, Dict, Any, Optional
 _MONEY_FORMAT = Format(scheme=Scheme.fixed, precision=0, group=Group.yes, symbol=Symbol.yes, symbol_prefix="$")
 _PERCENT_FORMAT = Format(scheme=Scheme.percentage, precision=1)
 
-# Shown on column headers so a hover explains what a field means without
-# cluttering the table itself. Matched by column id across every table that
-# uses this component (income, expenses, assets, liabilities, forecast, ...).
+# Matched by column id across every table using this component.
 _COLUMN_TOOLTIPS = {
     "category": "Groups this entry for reporting. Pick the closest match, or use 'Other' if nothing fits.",
     "description": "A short label so you can tell entries apart. Doesn't affect any calculations.",
@@ -97,9 +95,7 @@ def render_editable_table(
         editable=True,
         row_deletable=True,
         style_as_list_view=True,
-        # ── Persistence intentionally disabled ──────────────────────────────
-        # State is owned by project-state-store + JSON backend.
-        # Browser-level persistence would override fresh data on scenario switch.
+        # Disabled: browser-level persistence would override fresh data on scenario switch.
         persistence=False,
         tooltip_header={
             col["id"]: {"value": _COLUMN_TOOLTIPS[col["id"]], "type": "text"}
@@ -138,11 +134,7 @@ def render_editable_table(
             "letterSpacing": "0.05em",
             "padding": "12px 14px",
         },
-        # Editing a cell used to fill it solid blue via the "active" state,
-        # which combined with the browser's default black input text made the
-        # value nearly unreadable while typing. Keep the same dark background
-        # and light text as every other cell, and just add a bright border so
-        # the active cell is still obvious.
+        # Active-cell border only (not a solid fill) so typed text stays readable.
         style_data_conditional=[
             {
                 "if": {"state": "active"},
