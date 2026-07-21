@@ -125,7 +125,7 @@ def calculate_federal_tax(
     employer_payroll_tax = 0.0
     if owner_w2_salary > 0 and entity in ("S Corporation", "C Corporation"):
         employer_payroll_calc = calculate_payroll_tax(owner_w2_salary, filing_status, rules)
-        # No employer-side "Additional Medicare" — that surtax is employee-only.
+        # No employer-side "Additional Medicare": that surtax is employee-only.
         employer_payroll_tax = employer_payroll_calc["social_security"] + employer_payroll_calc["medicare"]
         business_net_income = business_net_income - employer_payroll_tax
         business_steps.append(
@@ -254,7 +254,7 @@ def calculate_federal_tax(
     effective_rate = total_personal_income_tax / agi if agi > 0 else 0.0
     combined_effective_rate = combined_tax / (gross_income + (business_net_income if entity == "C Corporation" else 0)) if (gross_income > 0) else 0.0
     
-    # Rendered inside an auto-numbering <ol> (see render_explain_panel) — don't hardcode numbers.
+    # Rendered inside an auto-numbering <ol> (see render_explain_panel): don't hardcode numbers.
     steps = list(business_steps) + [
         f"Gross Ordinary Income: W-2 (${w2_personal:,.2f}) + 1099 (${consulting_1099:,.2f}) + Interest (${interest:,.2f}) + Rental (${rental_income:,.2f}) + Pass-through Profit (${ordinary_flow_through:,.2f}) = ${gross_ordinary:,.2f}",
         f"Gross Capital Gains & Dividends: Cap Gains/Dividends (${cap_gains + dividends:,.2f}) + C-Corp Dividend Distribution (${business_to_personal_distributions if entity == 'C Corporation' else 0:,.2f}) = ${gross_cap_gains:,.2f}",
