@@ -1,7 +1,4 @@
-"""
-Persistent app header — rendered once in app.layout (not per-page).
-Contains the scenario dropdown and save status indicator.
-"""
+"""Persistent app header — rendered once in app.layout (not per-page)."""
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 
@@ -9,10 +6,7 @@ from planner.config import BASELINE_DISPLAY_NAME
 
 
 def render_header():
-    """
-    Returns the top-of-page header bar.
-    This is placed ONCE in app.layout so its IDs always exist in the DOM.
-    """
+    """Returns the top-of-page header bar; placed once in app.layout so its IDs always exist."""
     return html.Div(
         [
             html.Div(

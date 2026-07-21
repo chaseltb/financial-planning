@@ -5,17 +5,7 @@ def calculate_valuation(
     multiples: Dict[str, float],
     custom_method: Dict[str, Any] = None
 ) -> Dict[str, Any]:
-    """
-    Calculates business valuation using multiple methodologies:
-    - Revenue Multiple
-    - EBITDA Multiple
-    - Net Income Multiple
-    - Seller's Discretionary Earnings (SDE) Multiple
-    - Free Cash Flow (FCF) Multiple
-    - Custom Method
-    
-    Metrics should be annualized. E.g. Quarterly revenue * 4.
-    """
+    """Calculates business valuation using multiple methodologies. Metrics should be annualized (e.g. quarterly revenue * 4)."""
     revenue = metrics.get("revenue", 0.0)
     ebitda = metrics.get("ebitda", 0.0)
     net_income = metrics.get("net_income", 0.0)
