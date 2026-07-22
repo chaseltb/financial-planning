@@ -44,7 +44,7 @@ def render_header():
                         options=[{"label": BASELINE_DISPLAY_NAME, "value": "Baseline"}],
                         value="Baseline",
                         clearable=False,
-                        style={"width": "180px", "display": "inline-block", "color": "#0f172a"},
+                        style={"width": "260px", "display": "inline-block", "color": "#0f172a"},
                     ),
                     html.Span(
                         [html.I(className="bi bi-cloud-check-fill me-1"), "Auto-saved"],

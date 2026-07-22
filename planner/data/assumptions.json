@@ -25,5 +25,78 @@
   },
   "custom_valuation_name": "Custom Multiplier",
   "custom_valuation_multiplier": 3,
-  "forecast_overrides": {}
+  "forecast_overrides": {
+    "2026-Q1": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2026-Q2": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2026-Q3": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2026-Q4": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2027-Q1": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2027-Q2": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2027-Q3": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2027-Q4": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    }
+  }
 }

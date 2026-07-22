@@ -32,7 +32,7 @@ def render_citation_panel(panel_id: str = "nc-median-citations"):
                 id=f"{panel_id}-toggle",
                 color="link",
                 size="sm",
-                className="p-0 mb-2 text-muted",
+                className="p-0 mb-2 citation-panel-toggle",
                 style={"fontSize": "0.85rem", "textDecoration": "none"},
             ),
             dbc.Collapse(
@@ -45,7 +45,7 @@ def render_citation_panel(panel_id: str = "nc-median-citations"):
                             "hustle, or swapping in a national software engineer salary). The numbers "
                             "below are their sources. Replace any of them with your own on the Personal "
                             "and Business pages.",
-                            className="text-muted mb-3",
+                            className="citation-panel-text mb-3",
                             style={"fontSize": "0.82rem"},
                         ),
                         dbc.Table(
@@ -61,15 +61,15 @@ def render_citation_panel(panel_id: str = "nc-median-citations"):
                                 ]),
                             ],
                             bordered=False, striped=True, hover=False, size="sm",
-                            className="mb-3", style={"fontSize": "0.8rem"},
+                            className="citation-panel-table mb-3", style={"fontSize": "0.8rem"},
                         ),
-                        html.P("A few numbers aren't from a single cited source:", className="text-muted mb-1", style={"fontSize": "0.8rem", "fontWeight": "600"}),
+                        html.P("A few numbers aren't from a single cited source:", className="citation-panel-text mb-1", style={"fontSize": "0.8rem", "fontWeight": "600"}),
                         html.Ul(
                             [html.Li(item, style={"fontSize": "0.8rem"}) for item in ESTIMATED_ITEMS],
-                            className="text-muted mb-0",
+                            className="citation-panel-text mb-0",
                         ),
                     ],
-                    className="glass-card p-3 mb-3",
+                    className="glass-card citation-panel p-3 mb-3",
                 ),
                 id=f"{panel_id}-collapse",
                 is_open=False,
