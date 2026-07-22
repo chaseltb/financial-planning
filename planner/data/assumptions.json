@@ -1,10 +1,10 @@
 {
   "valuation_multiples": {
     "revenue": 2.5,
-    "ebitda": 6,
-    "net_income": 8,
+    "ebitda": 6.0,
+    "net_income": 8.0,
     "sde": 4.5,
-    "fcf": 7
+    "fcf": 7.0
   },
   "asset_growth_rates": {
     "Cash": 0.02,
@@ -24,6 +24,79 @@
     "Business loans": 0.07
   },
   "custom_valuation_name": "Custom Multiplier",
-  "custom_valuation_multiplier": 3,
-  "forecast_overrides": {}
+  "custom_valuation_multiplier": 3.0,
+  "forecast_overrides": {
+    "2026-Q1": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2026-Q2": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2026-Q3": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2026-Q4": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2027-Q1": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2027-Q2": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2027-Q3": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    },
+    "2027-Q4": {
+      "Revenue": 0,
+      "COGS": 0,
+      "Payroll": 0,
+      "Expenses": 0,
+      "Capital expenditures": 0,
+      "Owner salary": 0,
+      "Distributions": 0
+    }
+  }
 }

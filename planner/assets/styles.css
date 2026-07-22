@@ -376,3 +376,25 @@ input.form-control, select.form-select {
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     font-size: 0.8rem !important;
 }
+
+/* "Where do these default numbers come from?" panel on the Personal page.
+   Bootstrap's default .text-muted is too low-contrast against the glass-card
+   background at this font size; use the theme's text-secondary color instead,
+   which is tuned for contrast in both light and dark mode. */
+.citation-panel-toggle,
+.citation-panel-toggle:hover,
+.citation-panel-toggle:focus {
+    color: var(--text-secondary) !important;
+}
+
+.citation-panel-text {
+    color: var(--text-secondary) !important;
+}
+
+.citation-panel-table {
+    color: var(--text-primary) !important;
+}
+
+.citation-panel-table th {
+    color: var(--text-secondary) !important;
+}
