@@ -45,6 +45,7 @@ def calculate_nc_tax(
         "corporate_tax": corporate_tax,
         "combined_tax": combined_nc_tax,
         "nc_taxable_income": nc_taxable_income,
+        "flat_rate": flat_rate,
         "effective_rate": nc_personal_tax / federal_agi if federal_agi > 0 else 0.0,
         "trace": {
             "formula": "NC State Tax = (Federal AGI - NC Standard Deduction) * NC Flat Rate",
@@ -54,7 +55,7 @@ def calculate_nc_tax(
                 "filing_status": filing_status
             },
             "assumptions_used": "Filing-status-specific standard deductions applied. No itemized state deductions modeled.",
-            "rules_referenced": f"NC State Tax Rules 2026. Rate: {flat_rate*100:.2f}%. Standard Deduction: ${std_deduction:,.2f}",
+            "rules_referenced": f"NC State Tax Rules {rules.get('tax_year', 2026)}. Rate: {flat_rate*100:.2f}%. Standard Deduction: ${std_deduction:,.2f}",
             "steps": steps
         }
     }

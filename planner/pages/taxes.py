@@ -152,7 +152,7 @@ def populate_taxes_page(state):
         f"After a ${fed.get('qbi_deduction', 0):,.0f} QBI deduction, "
         f"federal taxable income is ${fed['taxable_income']:,.0f}. "
         f"NC taxable income is ${nc.get('nc_taxable_income', 0):,.0f} "
-        f"(NC flat rate {nc.get('nc_rate', 0.0399)*100:.2f}%)."
+        f"(NC flat rate {nc.get('flat_rate', 0.0399)*100:.2f}%, {r['tax_year']} rules)."
     )
 
     explain = render_explain_panel(
