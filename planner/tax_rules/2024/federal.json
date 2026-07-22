@@ -1,0 +1,36 @@
+{
+  "tax_year": 2024,
+  "standard_deduction": {
+    "single": 14600.0,
+    "married": 29200.0
+  },
+  "brackets": {
+    "single": [
+      {"rate": 0.10, "threshold": 0.0},
+      {"rate": 0.12, "threshold": 11600.0},
+      {"rate": 0.22, "threshold": 47150.0},
+      {"rate": 0.24, "threshold": 100525.0},
+      {"rate": 0.32, "threshold": 191950.0},
+      {"rate": 0.35, "threshold": 243725.0},
+      {"rate": 0.37, "threshold": 609350.0}
+    ],
+    "married": [
+      {"rate": 0.10, "threshold": 0.0},
+      {"rate": 0.12, "threshold": 23200.0},
+      {"rate": 0.22, "threshold": 94300.0},
+      {"rate": 0.24, "threshold": 201050.0},
+      {"rate": 0.32, "threshold": 383900.0},
+      {"rate": 0.35, "threshold": 487450.0},
+      {"rate": 0.37, "threshold": 731200.0}
+    ]
+  },
+  "corporate_rate": 0.21,
+  "additional_medicare_threshold": {
+    "single": 200000.0,
+    "married": 250000.0
+  },
+  "additional_medicare_rate": 0.009,
+  "social_security_rate": 0.062,
+  "social_security_limit": 168600.0,
+  "medicare_rate": 0.0145
+}
