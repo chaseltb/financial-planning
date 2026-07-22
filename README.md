@@ -10,9 +10,7 @@ A local, private tool for tracking your personal finances and a small business s
 
 ## Getting the code (git clone)
 
-1. Open a terminal.
-2. Go to the folder where you want the project to live.
-3. Run:
+1. Clone the repository in the terminal:
 
    ```
    git clone https://github.com/chaseltb/financial-planning.git
