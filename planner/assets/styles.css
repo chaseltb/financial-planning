@@ -399,6 +399,63 @@ input.form-control, select.form-select {
     color: var(--text-secondary) !important;
 }
 
+/* Legend for the tax bracket progress chart's three status colors. */
+.bracket-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+/* Compact stat strip (e.g. the six valuation methods) — one row, small chips,
+   instead of a full metric-card per value. */
+.valuation-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 4px 0;
+}
+
+.valuation-chip {
+    flex: 1 1 150px;
+    padding: 12px 20px;
+    border-left: 3px solid var(--accent-blue);
+}
+
+.valuation-chip.emerald { border-left-color: var(--accent-emerald); }
+.valuation-chip.purple { border-left-color: var(--accent-purple); }
+
+.chip-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+}
+
+.chip-value {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.chip-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.bracket-legend-item span {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
 /* Dropdown menu options (e.g. the scenario picker) are virtualized with a
    fixed row height per option. A label too long to fit on one line wraps
    instead of truncating, and the second line then overlaps the option

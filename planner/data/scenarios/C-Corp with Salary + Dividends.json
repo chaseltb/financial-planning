@@ -2,7 +2,6 @@
   "name": "C-Corp with Salary + Dividends",
   "changes": {
     "business.entity_type": "C Corporation",
-    "business.owner_salary": 60000,
-    "business.ownership_pct": 100
+    "business.owner_salary": 60000
   }
 }

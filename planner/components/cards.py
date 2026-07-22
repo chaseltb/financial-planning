@@ -1,6 +1,31 @@
 from dash import html
 import dash_bootstrap_components as dbc
 
+
+def render_chip_row(items):
+    """
+    A single dense strip of small stat chips (title/value/subtitle), for cases
+    where several metrics belong together but a full glass-card per metric
+    (see render_metric_card) is too much visual weight — e.g. six valuation
+    methods that are already charted below and don't each need their own card.
+    items: [{"title", "value", "subtitle", "color_class"}, ...]
+    """
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div(item["title"], className="chip-title"),
+                    html.Div(item["value"], className="chip-value"),
+                    html.Div(item.get("subtitle") or "—", className="chip-subtitle"),
+                ],
+                className=f"valuation-chip {item.get('color_class', '')}",
+            )
+            for item in items
+        ],
+        className="glass-card valuation-chip-row mb-4",
+    )
+
+
 def render_metric_card(title: str, value: str, subtitle: str = None, color_class: str = "", explain_target: str = None):
     """
     Renders a glassmorphic metric card.
