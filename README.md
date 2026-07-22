@@ -8,9 +8,7 @@ A local, private tool for tracking your personal finances and a small business s
 - Git installed on your machine
 - A terminal (Command Prompt, PowerShell, or similar)
 
-## Getting the code (git clone)
-
-1. Clone the repository in the terminal:
+## Clone the repository
 
    ```
    git clone https://github.com/chaseltb/financial-planning.git
@@ -53,7 +51,7 @@ http://127.0.0.1:8050
 
 ## Using the application
 
-- **Start on the Personal and Business pages.** Fill in your income, expenses, assets, debts, and business numbers. The app ships with example default values (based on North Carolina median figures) so you can see how it works before you enter your own.
+- **Start on the Personal and Business pages.** To start the net worth calculations, fill in your income, expenses, assets, debts, and business numbers. The app comes with example default values (based on North Carolina median figures) so you can see how it works before you enter your own.
 - **Check the Taxes page** if a number looks off. Every tax estimation has an explanation panel showing the formula and inputs behind it. If you notice an issue, feel free to fix it and create a PR.
 - **Turn on Autosave** (on by default) if you want every edit written to disk right away. You can turn it off in Settings and use the "Save Now" button instead if you'd rather control exactly when your data is saved.
 - **Watch the save status indicator** near the top of the screen. It shows a green check when your changes are saved, and a warning if a save fails.
