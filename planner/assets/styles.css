@@ -398,3 +398,14 @@ input.form-control, select.form-select {
 .citation-panel-table th {
     color: var(--text-secondary) !important;
 }
+
+/* Dropdown menu options (e.g. the scenario picker) are virtualized with a
+   fixed row height per option. A label too long to fit on one line wraps
+   instead of truncating, and the second line then overlaps the option
+   rendered right below it. Force a single line with ellipsis instead. */
+.VirtualizedSelectOption {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 8px;
+}
