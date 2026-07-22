@@ -21,7 +21,8 @@ def run_all_engines(
     Run every calculation engine against a state dict.
     Returns a flat dict of results consumed by page callbacks.
     """
-    rules = load_tax_rules(DEFAULT_TAX_YEAR, DEFAULT_STATE)
+    tax_year = int(state.get("assumptions", {}).get("tax_year", DEFAULT_TAX_YEAR))
+    rules = load_tax_rules(tax_year, DEFAULT_STATE)
     fed_rules = rules["federal"]
     nc_rules = rules["north_carolina"]
 
@@ -160,4 +161,5 @@ def run_all_engines(
         # Tax rules (for bracket visualizer)
         "fed_rules": fed_rules,
         "nc_rules": nc_rules,
+        "tax_year": tax_year,
     }
