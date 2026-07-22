@@ -1,4 +1,5 @@
 import base64
+import copy
 import io
 import json
 from datetime import datetime
@@ -7,7 +8,8 @@ import dash
 from dash import html, dcc, callback, callback_context, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 
-from planner.data_manager import save_project_state
+from planner.data_manager import save_project_state, save_or_mark_unsaved
+from planner.config import DEFAULT_TAX_YEAR
 
 dash.register_page(__name__, path="/settings", title="Settings & Backup")
 
@@ -33,7 +35,11 @@ def layout():
                                         dbc.Tooltip("The tax year whose rules and brackets will be used for all calculations.", target="label-tax-year"),
                                         dcc.Dropdown(
                                             id="settings-tax-year",
-                                            options=[{"label": "2026 Rules", "value": 2026}],
+                                            options=[
+                                                {"label": "2024 Rules", "value": 2024},
+                                                {"label": "2025 Rules", "value": 2025},
+                                                {"label": "2026 Rules", "value": 2026},
+                                            ],
                                             value=2026,
                                             clearable=False,
                                             className="mb-3",
@@ -200,6 +206,38 @@ def layout():
 )
 def populate_theme_dropdown(_pathname, theme):
     return theme or "dark"
+
+
+# Tax year lives in project-state-store's assumptions (it affects calculations
+# and belongs in the saved model, not a per-device UI preference like theme).
+@callback(
+    Output("settings-tax-year", "value"),
+    Input("url", "pathname"),
+    State("project-state-store", "data"),
+    prevent_initial_call=False,
+)
+def populate_tax_year_dropdown(_pathname, state):
+    if not state:
+        return DEFAULT_TAX_YEAR
+    return state.get("assumptions", {}).get("tax_year", DEFAULT_TAX_YEAR)
+
+
+@callback(
+    Output("project-state-store", "data", allow_duplicate=True),
+    Output("save-status-indicator", "children", allow_duplicate=True),
+    Input("settings-tax-year", "value"),
+    State("project-state-store", "data"),
+    State("active-scenario-store", "data"),
+    State("autosave-enabled-store", "data"),
+    prevent_initial_call=True,
+)
+def sync_tax_year_from_dropdown(tax_year, current_state, active_scenario, autosave_enabled):
+    if current_state is None or tax_year is None:
+        return no_update, no_update
+    new_state = copy.deepcopy(current_state)
+    new_state.setdefault("assumptions", {})["tax_year"] = int(tax_year)
+    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
+    return new_state, label
 
 
 @callback(
