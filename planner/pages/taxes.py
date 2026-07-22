@@ -4,6 +4,7 @@ from dash import html, dcc, callback, Input, Output, no_update
 import dash_bootstrap_components as dbc
 
 from planner.components.summary import render_explain_panel, render_empty_explain_panel
+from planner.components.charts import create_bracket_progress_chart
 from planner.data_manager import load_tax_rules
 from planner.config import DEFAULT_TAX_YEAR, DEFAULT_STATE
 from planner.engines.runner import run_all_engines
@@ -82,9 +83,17 @@ def layout():
                                 [
                                     html.H4(
                                         [html.I(className="bi bi-bar-chart-steps me-2 text-info"), "Progressive Tax Bracket Visualization"],
-                                        className="mb-3"
+                                        className="mb-1"
                                     ),
-                                    html.Div(id="tax-brackets-visualizer"),
+                                    html.Div(
+                                        [
+                                            html.Span([html.Span(style={"backgroundColor": "#3b82f6"}), " Taxed already"], className="bracket-legend-item"),
+                                            html.Span([html.Span(style={"backgroundColor": "#10b981"}), " Current bracket"], className="bracket-legend-item"),
+                                            html.Span([html.Span(style={"border": "1.5px dashed rgba(148,163,184,0.6)", "backgroundColor": "transparent"}), " Not reached"], className="bracket-legend-item"),
+                                        ],
+                                        className="bracket-legend mb-2",
+                                    ),
+                                    dcc.Graph(id="tax-brackets-visualizer", config={"displayModeBar": False}),
                                 ],
                                 className="glass-card mb-4",
                             ),
@@ -115,7 +124,7 @@ def layout():
     Output("tax-breakdown-combined",     "children"),
     Output("tax-breakdown-effective-rate","children"),
     Output("tax-overview-text",          "children"),
-    Output("tax-brackets-visualizer",    "children"),
+    Output("tax-brackets-visualizer",    "figure"),
     Output("taxes-explain-container",    "children"),
     Input("project-state-store", "data"),
     prevent_initial_call=False,
@@ -136,51 +145,7 @@ def populate_taxes_page(state):
     brackets = sorted(rules.get("brackets", {}).get(filing, []), key=lambda x: x["threshold"])
     taxable = fed.get("taxable_income", 0.0)
 
-    bar_elements = []
-    for i, br in enumerate(brackets):
-        lower = br["threshold"]
-        upper = brackets[i + 1]["threshold"] if i + 1 < len(brackets) else None
-
-        if taxable <= lower:
-            pct = 0.0
-            amount_in_bracket = 0.0
-        elif upper is None:
-            # Top, open-ended bracket — no ceiling to measure "how far into it".
-            pct = 100.0
-            amount_in_bracket = taxable - lower
-        elif taxable >= upper:
-            pct = 100.0
-            amount_in_bracket = upper - lower
-        else:
-            amount_in_bracket = taxable - lower
-            pct = (amount_in_bracket / (upper - lower)) * 100.0
-
-        is_current = 0.0 < pct < 100.0
-        color = "secondary" if pct == 0 else ("info" if is_current else "success")
-
-        range_label = f"${lower:,.0f} – ${upper:,.0f}" if upper is not None else f"${lower:,.0f}+"
-        detail = (
-            f"${amount_in_bracket:,.0f} of ${(upper - lower):,.0f} used" if upper is not None and pct > 0
-            else (f"${amount_in_bracket:,.0f} in this bracket" if pct > 0 else f"Threshold: ${lower:,.0f}")
-        )
-
-        bar_elements.append(html.Div([
-            html.Div(
-                [
-                    html.Span(f"{br['rate']*100:.0f}% bracket ({range_label})",
-                              style={"fontSize": "0.85rem", "fontWeight": "600"}),
-                    html.Span(detail,
-                              className="text-muted ms-auto",
-                              style={"fontSize": "0.8rem"}),
-                ],
-                style={"display": "flex"},
-            ),
-            dbc.Progress(
-                value=pct,
-                color=color,
-                style={"height": "8px", "margin": "6px 0 12px 0"},
-            ),
-        ]))
+    bracket_fig = create_bracket_progress_chart(brackets, taxable)
 
     overview_text = (
         f"Your Adjusted Gross Income (AGI) is ${fed['agi']:,.0f}. "
@@ -209,6 +174,6 @@ def populate_taxes_page(state):
         f"${combined:,.0f}",
         f"{effective * 100:.1f}%",
         overview_text,
-        bar_elements,
+        bracket_fig,
         explain,
     )

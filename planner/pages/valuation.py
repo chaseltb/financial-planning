@@ -6,7 +6,7 @@ from dash import html, dcc, callback, callback_context, Input, Output, State, AL
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
-from planner.components.cards import render_metric_card
+from planner.components.cards import render_metric_card, render_chip_row
 from planner.components.charts import create_sensitivity_chart, apply_dark_layout
 from planner.engines.runner import run_all_engines
 from planner.data_manager import save_or_mark_unsaved
@@ -18,22 +18,15 @@ def layout():
         [
             html.Div(
                 [
-                    html.Div("OUR BEST ESTIMATE", className="text-muted",
+                    html.Div("OUR BEST ESTIMATE (EBITDA MULTIPLE)", className="text-muted",
                              style={"fontSize": "0.8rem", "letterSpacing": "0.05em", "fontWeight": "600"}),
                     html.H1(id="valuation-headline-value", style={"fontWeight": "800", "marginBottom": "4px"}),
-                    html.Div(id="valuation-headline-range", className="text-muted", style={"fontSize": "0.95rem"}),
-                    html.Div(
-                        "Based on the EBITDA Multiple method — the most commonly used approach for "
-                        "small-business valuation. The other five methods below are shown for comparison; "
-                        "they can vary widely depending on which one a buyer or lender chooses to weigh.",
-                        className="text-muted mt-2",
-                        style={"fontSize": "0.85rem", "maxWidth": "720px"},
-                    ),
+                    html.Div(id="valuation-headline-range", className="text-muted", style={"fontSize": "0.9rem"}),
                 ],
                 className="glass-card mb-4",
                 style={"borderLeft": "4px solid var(--accent-emerald)"},
             ),
-            dbc.Row(id="valuation-cards-row", className="mb-4"),
+            html.Div(id="valuation-cards-row"),
             dbc.Row(
                 [
                     dbc.Col(
@@ -235,26 +228,26 @@ def populate_valuation_page(state, stored_method, stored_range, dropdown_method,
     headline_value = f"${val['valuations']['EBITDA Multiple']:,.0f}"
     headline_range = f"Other methods range from ${min(all_values):,.0f} to ${max(all_values):,.0f}"
 
-    cards = [
-        render_metric_card("Revenue Multiple",
-                           f"${val['valuations']['Revenue Multiple']:,.0f}",
-                           f"× {multiples.get('revenue', 2.5)}"),
-        render_metric_card("EBITDA Multiple",
-                           f"${val['valuations']['EBITDA Multiple']:,.0f}",
-                           f"× {multiples.get('ebitda', 6.0)}", "emerald"),
-        render_metric_card("Net Income Multiple",
-                           f"${val['valuations']['Net Income Multiple']:,.0f}",
-                           f"× {multiples.get('net_income', 8.0)}"),
-        render_metric_card("SDE Multiple",
-                           f"${val['valuations']['SDE Multiple']:,.0f}",
-                           f"× {multiples.get('sde', 4.5)}"),
-        render_metric_card("FCF Multiple",
-                           f"${val['valuations']['FCF Multiple']:,.0f}",
-                           f"× {multiples.get('fcf', 7.0)}", "purple"),
-        render_metric_card(custom["name"],
-                           f"${val['valuations'].get(custom['name'], 0):,.0f}",
-                           f"× {custom['multiplier']}"),
-    ]
+    cards = render_chip_row([
+        {"title": "Revenue Multiple",
+         "value": f"${val['valuations']['Revenue Multiple']:,.0f}",
+         "subtitle": f"× {multiples.get('revenue', 2.5)}"},
+        {"title": "EBITDA Multiple",
+         "value": f"${val['valuations']['EBITDA Multiple']:,.0f}",
+         "subtitle": f"× {multiples.get('ebitda', 6.0)}", "color_class": "emerald"},
+        {"title": "Net Income Multiple",
+         "value": f"${val['valuations']['Net Income Multiple']:,.0f}",
+         "subtitle": f"× {multiples.get('net_income', 8.0)}"},
+        {"title": "SDE Multiple",
+         "value": f"${val['valuations']['SDE Multiple']:,.0f}",
+         "subtitle": f"× {multiples.get('sde', 4.5)}"},
+        {"title": "FCF Multiple",
+         "value": f"${val['valuations']['FCF Multiple']:,.0f}",
+         "subtitle": f"× {multiples.get('fcf', 7.0)}", "color_class": "purple"},
+        {"title": custom["name"],
+         "value": f"${val['valuations'].get(custom['name'], 0):,.0f}",
+         "subtitle": f"× {custom['multiplier']}"},
+    ])
 
     fig_comp = go.Figure(data=[go.Bar(
         x=list(val["valuations"].keys()),
