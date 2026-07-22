@@ -145,6 +145,126 @@ def create_sensitivity_chart(sensitivity_curve: List[Dict[str, Any]], base_metho
     return apply_dark_layout(fig, f"Valuation Sensitivity for {base_method}")
 
 
+def create_bracket_progress_chart(brackets: List[Dict[str, float]], taxable_income: float) -> go.Figure:
+    """
+    Single horizontal stacked bar spanning $0 through one bracket past the
+    taxpayer's current one. Each segment is one tax bracket, colored by status
+    (already used / current / not yet reached) rather than by rate, since status
+    is what "progression" actually means here — rate and dollar range are
+    direct-labeled instead. Brackets beyond that are folded into one final
+    "further brackets" segment so the relevant (usually low/mid) part of the
+    scale isn't squeezed into a sliver by a $600k+ top bracket almost no one hits.
+    """
+    n = len(brackets)
+    lowers = [br["threshold"] for br in brackets]
+    uppers = lowers[1:] + [None]  # None = open-ended top bracket
+
+    current_index = next((i for i in range(n) if uppers[i] is None or taxable_income < uppers[i]), n - 1)
+    visible_count = min(current_index + 2, n)  # current bracket + one bracket of headroom
+    folded_brackets = brackets[visible_count:]
+
+    passed_color = "#3b82f6"     # accent-blue — matches app's existing brand accent
+    current_color = "#10b981"    # accent-emerald — matches app's existing brand accent
+    future_fill = "rgba(148, 163, 184, 0.08)"
+    future_line = "rgba(148, 163, 184, 0.45)"
+    gap_line = "rgba(148, 163, 184, 0.35)"
+
+    # Give the last visible bracket a finite width: its own span if it has an
+    # upper bound, otherwise (open-ended, or about to be folded away) match the
+    # previous bracket's span, padded out if income actually reaches that far.
+    def segment_width(i):
+        if uppers[i] is not None:
+            return uppers[i] - lowers[i]
+        prev_span = (lowers[i] - lowers[i - 1]) if i > 0 else max(lowers[i], 1.0)
+        return max(prev_span, (taxable_income - lowers[i]) * 1.15)
+
+    widths = [segment_width(i) for i in range(visible_count)]
+    fold_width = max(widths[-1], sum(widths) * 0.25) if folded_brackets else 0.0
+    total_span = sum(widths) + fold_width
+
+    fig = go.Figure()
+    for i in range(visible_count):
+        lower, width = lowers[i], widths[i]
+        upper = lower + width
+        is_open_ended = uppers[i] is None
+
+        if i < current_index:
+            status, fill, used = "passed", passed_color, width
+        elif i == current_index:
+            status, fill, used = "current", current_color, taxable_income - lower
+        else:
+            status, fill, used = "future", future_fill, 0.0
+
+        range_label = f"${lower:,.0f}-${upper:,.0f}" if not is_open_ended else f"${lower:,.0f}+"
+        if status == "future":
+            detail = f"Not reached yet (starts at ${lower:,.0f})"
+        elif is_open_ended:
+            detail = f"${used:,.0f} taxed at this rate so far"
+        else:
+            detail = f"${used:,.0f} of ${width:,.0f} used"
+
+        show_label = (width / total_span) > 0.07
+        fig.add_trace(go.Bar(
+            x=[width], y=["bracket"], orientation="h",
+            marker={
+                "color": fill,
+                "line": {"color": future_line if status == "future" else gap_line, "width": 1.5},
+            },
+            text=f"{brackets[i]['rate']*100:.0f}%" if show_label else "",
+            textposition="inside",
+            insidetextfont={"color": "#f8fafc" if status != "future" else _CHART_TEXT_COLOR, "size": 13},
+            customdata=[f"{brackets[i]['rate']*100:.0f}% bracket ({range_label})<br>{detail}"],
+            hovertemplate="%{customdata}<extra></extra>",
+            showlegend=False,
+        ))
+
+    if folded_brackets:
+        fold_rates = f"{folded_brackets[0]['rate']*100:.0f}-{folded_brackets[-1]['rate']*100:.0f}%"
+        fig.add_trace(go.Bar(
+            x=[fold_width], y=["bracket"], orientation="h",
+            marker={"color": future_fill, "line": {"color": future_line, "width": 1.5}},
+            text=f"{fold_rates}" if (fold_width / total_span) > 0.1 else "",
+            textposition="inside",
+            insidetextfont={"color": _CHART_TEXT_COLOR, "size": 12},
+            customdata=[f"Higher brackets ({fold_rates}) start above ${lowers[visible_count]:,.0f}"],
+            hovertemplate="%{customdata}<extra></extra>",
+            showlegend=False,
+        ))
+
+    marker_pct = min(taxable_income, total_span) / total_span
+    label_anchor = "left" if marker_pct < 0.15 else ("right" if marker_pct > 0.85 else "center")
+
+    fig.update_layout(
+        barmode="stack",
+        bargap=0,
+        height=110,
+        margin={"t": 34, "b": 30, "l": 10, "r": 10},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        showlegend=False,
+        xaxis={
+            "range": [0, total_span],
+            "tickfont": {"size": 11, "color": _CHART_TEXT_COLOR},
+            "tickprefix": "$",
+            "gridcolor": _CHART_GRIDLINE_COLOR,
+            "zeroline": False,
+        },
+        yaxis={"visible": False},
+    )
+    fig.add_shape(
+        type="line", x0=taxable_income, x1=taxable_income, y0=0, y1=1, yref="paper",
+        line={"color": _CHART_TEXT_COLOR, "width": 1.5, "dash": "dot"},
+    )
+    fig.add_annotation(
+        x=taxable_income, y=1, yref="paper", yanchor="bottom",
+        xanchor=label_anchor,
+        text=f"Taxable income: ${taxable_income:,.0f}",
+        showarrow=False,
+        font={"color": _CHART_TEXT_COLOR, "size": 12},
+    )
+    return fig
+
+
 def create_scenario_comparison(comparison_data: List[Dict[str, Any]]) -> go.Figure:
     # comparison_data: [{"Metric": "Tax", "Baseline": 12000, "Scenario": 15000}, ...]
     df = pd.DataFrame(comparison_data)
