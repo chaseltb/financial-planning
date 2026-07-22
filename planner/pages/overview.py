@@ -107,18 +107,21 @@ def update_overview(state, explain_target):
 
     # Explanation panel
     target = explain_target or "combined_tax"
+    tax_year = r["tax_year"]
+    fed_rules = r["fed_rules"]
+    nc_rules = r["nc_rules"]
     panels = {
         "combined_tax": render_explain_panel(
             "Combined Tax Liability",
             "Combined = Personal Tax + SE Tax + Corporate Tax (Fed + NC)",
             {"AGI": fed_tax["agi"], "Net Biz Income": r["annual_net_biz_income"]},
             "All tax layers consolidated — true aggregate burden.",
-            "2026 IRS and NC DOR rules.",
+            f"{tax_year} IRS and NC DOR rules.",
             fed_tax["trace"]["steps"] + nc_tax["trace"]["steps"],
         ),
         "personal_tax": render_explain_panel(
             "Personal Federal + State Tax",
-            "Fed Tax = Bracket Tax + Cap Gains\nNC Tax = (AGI − NC Std Deduction) × 3.99%",
+            f"Fed Tax = Bracket Tax + Cap Gains\nNC Tax = (AGI − NC Std Deduction) × {nc_tax.get('flat_rate', 0.0399)*100:.2f}%",
             {"AGI": fed_tax["agi"], "Taxable Income": fed_tax["taxable_income"],
              "Filing Status": r["filing_status"]},
             fed_tax["trace"]["assumptions_used"],
@@ -127,10 +130,11 @@ def update_overview(state, explain_target):
         ),
         "business_tax": render_explain_panel(
             "Business SE / Corporate Tax",
-            "SE Tax = (Net Profit × 92.35%) × 15.3%\nC-Corp Tax = Net Profit × 21% + 2.5% NC",
+            f"SE Tax = (Net Profit × 92.35%) × 15.3%\nC-Corp Tax = Net Profit × {fed_rules.get('corporate_rate', 0.21)*100:.0f}% + {nc_rules.get('corporate_rate', 0.025)*100:.2f}% NC",
             {"Net Biz Income": r["annual_net_biz_income"], "Entity": r["entity_type"]},
             "Pass-through → SE Tax; C-Corp → entity-level corporate taxes.",
-            "SS wage cap 2026: $184,500. C-Corp Fed: 21%. NC Corp: 2.5%.",
+            f"SS wage cap {tax_year}: ${fed_rules.get('social_security_limit', 0):,.0f}. "
+            f"C-Corp Fed: {fed_rules.get('corporate_rate', 0.21)*100:.0f}%. NC Corp: {nc_rules.get('corporate_rate', 0.025)*100:.2f}%.",
             fed_tax["trace"]["steps"],
         ),
         "net_worth": render_explain_panel(
