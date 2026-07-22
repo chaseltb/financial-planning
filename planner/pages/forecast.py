@@ -126,7 +126,8 @@ def layout():
 
 
 def _run_forecast(state, horizon):
-    rules = load_tax_rules(DEFAULT_TAX_YEAR, DEFAULT_STATE)
+    tax_year = int(state.get("assumptions", {}).get("tax_year", DEFAULT_TAX_YEAR))
+    rules = load_tax_rules(tax_year, DEFAULT_STATE)
     history_df = pd.DataFrame(state.get("forecast", []))
     for col in NUMERIC_COLS:
         if col in history_df.columns:
