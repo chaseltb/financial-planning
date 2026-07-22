@@ -62,23 +62,18 @@ def update_overview(state, explain_target):
     nw_proj_df = r["nw_proj_df"]
     forecast_df = r["forecast_df"]
 
+    personal_tax = fed_tax["value"] + nc_tax["value"]
+    se_corp_tax = fed_tax["se_tax"] + fed_tax["corporate_tax"] + nc_tax["corporate_tax"]
+
+    # Four headline numbers instead of six near-duplicate cards: Personal Tax and
+    # SE/Corp Tax are components of Combined Tax, so they ride as its subtitle
+    # rather than getting their own card (still one click away via Combined Tax's
+    # explain panel, which already includes both in its step trace).
     cards = [
-        render_metric_card(
-            "Personal Tax",
-            f"${fed_tax['value'] + nc_tax['value']:,.0f}",
-            f"Fed ${fed_tax['value']:,.0f} · NC ${nc_tax['value']:,.0f}",
-            "purple", "personal_tax",
-        ),
-        render_metric_card(
-            "SE / Corp Tax",
-            f"${fed_tax['se_tax'] + fed_tax['corporate_tax'] + nc_tax['corporate_tax']:,.0f}",
-            f"SE Tax: ${fed_tax['se_tax']:,.0f}",
-            "emerald", "business_tax",
-        ),
         render_metric_card(
             "Combined Tax",
             f"${r['combined_tax']:,.0f}",
-            f"Effective Rate: {r['effective_rate'] * 100:.1f}%",
+            f"Personal ${personal_tax:,.0f} + SE/Corp ${se_corp_tax:,.0f} · {r['effective_rate'] * 100:.1f}% effective",
             "purple", "combined_tax",
         ),
         render_metric_card(
@@ -108,8 +103,6 @@ def update_overview(state, explain_target):
     # Explanation panel
     target = explain_target or "combined_tax"
     tax_year = r["tax_year"]
-    fed_rules = r["fed_rules"]
-    nc_rules = r["nc_rules"]
     panels = {
         "combined_tax": render_explain_panel(
             "Combined Tax Liability",
@@ -118,24 +111,6 @@ def update_overview(state, explain_target):
             "All tax layers consolidated — true aggregate burden.",
             f"{tax_year} IRS and NC DOR rules.",
             fed_tax["trace"]["steps"] + nc_tax["trace"]["steps"],
-        ),
-        "personal_tax": render_explain_panel(
-            "Personal Federal + State Tax",
-            f"Fed Tax = Bracket Tax + Cap Gains\nNC Tax = (AGI − NC Std Deduction) × {nc_tax.get('flat_rate', 0.0399)*100:.2f}%",
-            {"AGI": fed_tax["agi"], "Taxable Income": fed_tax["taxable_income"],
-             "Filing Status": r["filing_status"]},
-            fed_tax["trace"]["assumptions_used"],
-            fed_tax["trace"]["rules_referenced"],
-            fed_tax["trace"]["steps"] + nc_tax["trace"]["steps"],
-        ),
-        "business_tax": render_explain_panel(
-            "Business SE / Corporate Tax",
-            f"SE Tax = (Net Profit × 92.35%) × 15.3%\nC-Corp Tax = Net Profit × {fed_rules.get('corporate_rate', 0.21)*100:.0f}% + {nc_rules.get('corporate_rate', 0.025)*100:.2f}% NC",
-            {"Net Biz Income": r["annual_net_biz_income"], "Entity": r["entity_type"]},
-            "Pass-through → SE Tax; C-Corp → entity-level corporate taxes.",
-            f"SS wage cap {tax_year}: ${fed_rules.get('social_security_limit', 0):,.0f}. "
-            f"C-Corp Fed: {fed_rules.get('corporate_rate', 0.21)*100:.0f}%. NC Corp: {nc_rules.get('corporate_rate', 0.025)*100:.2f}%.",
-            fed_tax["trace"]["steps"],
         ),
         "net_worth": render_explain_panel(
             "Net Worth",
