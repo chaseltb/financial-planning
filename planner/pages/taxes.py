@@ -87,8 +87,14 @@ def layout():
                                     ),
                                     html.Div(
                                         [
-                                            html.Span([html.Span(style={"backgroundColor": "#3b82f6"}), " Taxed already"], className="bracket-legend-item"),
-                                            html.Span([html.Span(style={"backgroundColor": "#10b981"}), " Current bracket"], className="bracket-legend-item"),
+                                            html.Span(
+                                                [
+                                                    html.Span(style={"background": "linear-gradient(135deg, #93c5fd 50%, #1d4ed8 50%)"}),
+                                                    " Active bracket",
+                                                ],
+                                                className="bracket-legend-item",
+                                            ),
+                                            html.Span([html.Span(style={"backgroundColor": "#10b981"}), " Next bracket"], className="bracket-legend-item"),
                                             html.Span([html.Span(style={"border": "1.5px dashed rgba(148,163,184,0.6)", "backgroundColor": "transparent"}), " Not reached"], className="bracket-legend-item"),
                                         ],
                                         className="bracket-legend mb-2",
@@ -104,7 +110,6 @@ def layout():
                         html.Div(
                             id="taxes-explain-container",
                             children=render_empty_explain_panel(),
-                            className="glass-card",
                         ),
                         lg=6,
                     ),
@@ -147,12 +152,31 @@ def populate_taxes_page(state):
 
     bracket_fig = create_bracket_progress_chart(brackets, taxable)
 
+    se_tax = fed.get("se_tax", 0.0)
+    payroll_tax = fed.get("payroll_tax", 0.0)
+    employer_payroll_tax = fed.get("employer_payroll_tax", 0.0)
+    corp_tax_total = fed.get("corporate_tax", 0.0) + nc.get("corporate_tax", 0.0)
+
     overview_text = (
         f"Your Adjusted Gross Income (AGI) is ${fed['agi']:,.0f}. "
         f"After a ${fed.get('qbi_deduction', 0):,.0f} QBI deduction, "
         f"federal taxable income is ${fed['taxable_income']:,.0f}. "
         f"NC taxable income is ${nc.get('nc_taxable_income', 0):,.0f} "
-        f"(NC flat rate {nc.get('flat_rate', 0.0399)*100:.2f}%, {r['tax_year']} rules)."
+        f"(NC flat rate {nc.get('flat_rate', 0.0399)*100:.2f}%, {r['tax_year']} rules). "
+        f"Federal personal income tax comes to ${fed['value']:,.0f} and NC state tax to ${nc['value']:,.0f}."
+    )
+    if se_tax > 0:
+        overview_text += f" Self-employment tax (Social Security + Medicare on business profit) adds ${se_tax:,.0f}."
+    if payroll_tax > 0 or employer_payroll_tax > 0:
+        overview_text += (
+            f" W-2 payroll (FICA) tax adds ${payroll_tax:,.0f} on the employee side"
+            + (f" plus ${employer_payroll_tax:,.0f} in employer match on owner wages." if employer_payroll_tax > 0 else ".")
+        )
+    if corp_tax_total > 0:
+        overview_text += f" Corporate income tax (Federal + NC) adds ${corp_tax_total:,.0f}."
+    overview_text += (
+        f" Altogether, combined tax liability is ${combined:,.0f}, "
+        f"an effective rate of {effective * 100:.1f}% on AGI."
     )
 
     explain = render_explain_panel(

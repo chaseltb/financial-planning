@@ -34,6 +34,7 @@ app.layout = html.Div(
         # Theme/autosave prefs persist in the browser, not the JSON backend, since they're device-local.
         dcc.Store(id="theme-store", data="dark", storage_type="local"),
         dcc.Store(id="autosave-enabled-store", data=True, storage_type="local"),
+        dcc.Store(id="sidebar-collapsed-store", data=False, storage_type="local"),
         dcc.Store(id="mobile-nav-open-store", data=False),
         html.Div(id="theme-applier", style={"display": "none"}),
 
@@ -84,11 +85,43 @@ app.clientside_callback(
     prevent_initial_call=True,
 )
 
+# Desktop icon-rail collapse toggle, independent of the mobile off-canvas open/close
+# below. Two ways to change it: the toggle button always flips it either way;
+# clicking anywhere else on the sidebar only ever expands it (a click on a nav
+# link while expanded shouldn't collapse the sidebar out from under it). A
+# button click also bubbles up to app-sidebar's own n_clicks, so the toggle
+# button is checked by membership in the whole triggered list, not just
+# triggered[0] — order between the two isn't guaranteed for one bubbled click.
 app.clientside_callback(
     """
-    function(isOpen) {
+    function(sidebarClicks, toggleClicks, collapsed) {
+        const triggeredIds = window.dash_clientside.callback_context.triggered.map(
+            t => t.prop_id.split('.')[0]
+        );
+        if (triggeredIds.includes('sidebar-collapse-toggle')) {
+            return !collapsed;
+        }
+        if (triggeredIds.includes('app-sidebar') && collapsed) {
+            return false;
+        }
+        return collapsed;
+    }
+    """,
+    Output("sidebar-collapsed-store", "data"),
+    Input("app-sidebar", "n_clicks"),
+    Input("sidebar-collapse-toggle", "n_clicks"),
+    State("sidebar-collapsed-store", "data"),
+    prevent_initial_call=True,
+)
+
+app.clientside_callback(
+    """
+    function(isOpen, isCollapsed) {
+        let sidebarClass = 'sidebar-container';
+        if (isOpen) { sidebarClass += ' mobile-open'; }
+        if (isCollapsed) { sidebarClass += ' collapsed'; }
         return [
-            isOpen ? 'sidebar-container mobile-open' : 'sidebar-container',
+            sidebarClass,
             isOpen ? 'mobile-nav-backdrop visible' : 'mobile-nav-backdrop'
         ];
     }
@@ -96,6 +129,7 @@ app.clientside_callback(
     Output("app-sidebar", "className"),
     Output("mobile-nav-backdrop", "className"),
     Input("mobile-nav-open-store", "data"),
+    Input("sidebar-collapsed-store", "data"),
 )
 
 
@@ -111,7 +145,7 @@ def update_page_title(pathname):
         "/taxes": "Tax Planning & Auditing",
         "/networth": "Net Worth Tracking",
         "/valuation": "Business Valuation",
-        "/forecast": "Financial Projections & Spreadsheet",
+        "/forecast": "Business Financial Projection Spreadsheet",
         "/scenarios": "Scenario Manager",
         "/settings": "Settings & Backup"
     }

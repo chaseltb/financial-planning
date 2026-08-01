@@ -1,12 +1,18 @@
 {
   "name": "Junior Software Engineer (National)",
   "changes": {
+    "profile.retirement_401k": 5000,
+    "profile.retirement_ira": 7500,
+    "business.revenue_growth": 0.01,
+    "business.expense_growth": 0,
+    "business.owner_salary": 900,
+    "assumptions.tax_year": 2026,
     "income": [
       {
         "id": "inc_1",
         "category": "W-2",
         "description": "Job Salary (national median, Junior Software Engineer, Salary.com 2025)",
-        "amount": 82506,
+        "amount": 80000,
         "frequency": "Annual",
         "taxable": "True"
       },
@@ -14,7 +20,7 @@
         "id": "inc_3",
         "category": "Dividends",
         "description": "Index Fund Dividends",
-        "amount": 150.0,
+        "amount": 400,
         "frequency": "Annual",
         "taxable": "True"
       },
@@ -30,9 +36,98 @@
         "id": "inc_5",
         "category": "Capital gains",
         "description": "Stock Sales",
-        "amount": 0,
+        "amount": 1000,
         "frequency": "Annual",
         "taxable": "True"
+      },
+      {
+        "category": "Other",
+        "description": "New Income Source",
+        "amount": 0
+      }
+    ],
+    "expenses": [
+      {
+        "id": "exp_1",
+        "category": "Housing",
+        "description": "Rent (NC median gross rent, Census ACS 2023)",
+        "amount": 1500,
+        "frequency": "Annual"
+      },
+      {
+        "id": "exp_2",
+        "category": "Food",
+        "description": "Groceries & Dining Out",
+        "amount": "6000",
+        "frequency": "Annual"
+      },
+      {
+        "id": "exp_3",
+        "category": "Transportation",
+        "description": "Car Payment/Insurance/Gas (NC avg, NC Commerce/BLS 2024)",
+        "amount": 3000,
+        "frequency": "Annual"
+      },
+      {
+        "id": "exp_4",
+        "category": "Utilities",
+        "description": "Electric/Water/Internet/Phone (est.)",
+        "amount": 1500,
+        "frequency": "Annual"
+      },
+      {
+        "id": "exp_5",
+        "category": "Entertainment",
+        "description": "Travel & Leisure",
+        "amount": 2500,
+        "frequency": "Annual"
+      }
+    ],
+    "assets": [
+      {
+        "id": "ast_1",
+        "category": "Cash",
+        "description": "Emergency Savings (HYSA)",
+        "value": 8000,
+        "growth_rate": "0.02"
+      },
+      {
+        "id": "ast_2",
+        "category": "Brokerage",
+        "description": "Index Funds",
+        "value": 40000,
+        "growth_rate": "0.07"
+      },
+      {
+        "id": "ast_3",
+        "category": "Retirement",
+        "description": "Traditional 401k (median 401k balance, Fidelity/Empower 2024)",
+        "value": 13000,
+        "growth_rate": "0.07"
+      },
+      {
+        "id": "ast_6",
+        "category": "Crypto",
+        "description": "Bitcoin Portfolio",
+        "value": "500",
+        "growth_rate": 0.05
+      }
+    ],
+    "liabilities": [],
+    "forecast": [
+      {
+        "Quarter": "2025-Q4",
+        "Revenue": 1250.0,
+        "COGS": 50.0,
+        "Payroll": 250.0,
+        "Expenses": 250.0,
+        "Capital expenditures": 0.0,
+        "Owner salary": 0,
+        "Distributions": 0,
+        "Tax estimate": 0,
+        "Cash": 0,
+        "EBITDA": 700.0,
+        "Business value": 16800.0
       }
     ]
   }

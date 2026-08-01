@@ -196,7 +196,7 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, actio
     ]
     comp_table = dbc.Table.from_dataframe(
         pd.DataFrame(rows),
-        striped=True, bordered=False, hover=True, size="sm", className="text-white mb-0",
+        striped=True, bordered=False, hover=True, size="sm", className="themed-table mb-0",
     )
 
     metrics_list = list(base_s.keys())

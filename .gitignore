@@ -221,3 +221,6 @@ __marimo__/
 planner/data/*.csv
 planner/data/*.json
 planner/data/scenarios/*.json
+planner/data/profile.json
+planner/data/profile.json
+planner/data/profile.json

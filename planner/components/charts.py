@@ -148,12 +148,14 @@ def create_sensitivity_chart(sensitivity_curve: List[Dict[str, Any]], base_metho
 def create_bracket_progress_chart(brackets: List[Dict[str, float]], taxable_income: float) -> go.Figure:
     """
     Single horizontal stacked bar spanning $0 through one bracket past the
-    taxpayer's current one. Each segment is one tax bracket, colored by status
-    (already used / current / not yet reached) rather than by rate, since status
-    is what "progression" actually means here — rate and dollar range are
-    direct-labeled instead. Brackets beyond that are folded into one final
-    "further brackets" segment so the relevant (usually low/mid) part of the
-    scale isn't squeezed into a sliver by a $600k+ top bracket almost no one hits.
+    taxpayer's current one. Each active (reached, including the current) bracket
+    alternates between a light and dark shade of blue so adjacent brackets are
+    visually distinct at a glance. The one bracket of headroom past the current
+    bracket — the "next" bracket the taxpayer would enter if income rose further —
+    is highlighted green. Brackets past that are folded into one final "further
+    brackets" segment, greyed out/dashed as "not reached", so the relevant
+    (usually low/mid) part of the scale isn't squeezed into a sliver by a
+    $600k+ top bracket almost no one hits.
     """
     n = len(brackets)
     lowers = [br["threshold"] for br in brackets]
@@ -163,8 +165,8 @@ def create_bracket_progress_chart(brackets: List[Dict[str, float]], taxable_inco
     visible_count = min(current_index + 2, n)  # current bracket + one bracket of headroom
     folded_brackets = brackets[visible_count:]
 
-    passed_color = "#3b82f6"     # accent-blue — matches app's existing brand accent
-    current_color = "#10b981"    # accent-emerald — matches app's existing brand accent
+    active_shades = ["#93c5fd", "#1d4ed8"]  # light blue / dark blue, alternating per bracket
+    next_color = "#10b981"       # emerald — highlights the very next bracket the taxpayer would enter
     future_fill = "rgba(148, 163, 184, 0.08)"
     future_line = "rgba(148, 163, 184, 0.45)"
     gap_line = "rgba(148, 163, 184, 0.35)"
@@ -188,31 +190,31 @@ def create_bracket_progress_chart(brackets: List[Dict[str, float]], taxable_inco
         upper = lower + width
         is_open_ended = uppers[i] is None
 
-        if i < current_index:
-            status, fill, used = "passed", passed_color, width
-        elif i == current_index:
-            status, fill, used = "current", current_color, taxable_income - lower
+        if i <= current_index:
+            status, fill, used = "active", active_shades[i % 2], (width if i < current_index else taxable_income - lower)
         else:
-            status, fill, used = "future", future_fill, 0.0
+            status, fill, used = "next", next_color, 0.0
 
         range_label = f"${lower:,.0f}-${upper:,.0f}" if not is_open_ended else f"${lower:,.0f}+"
-        if status == "future":
+        if status == "next":
             detail = f"Not reached yet (starts at ${lower:,.0f})"
         elif is_open_ended:
             detail = f"${used:,.0f} taxed at this rate so far"
         else:
             detail = f"${used:,.0f} of ${width:,.0f} used"
 
+        line_color, line_width = gap_line, 1.5
+
         show_label = (width / total_span) > 0.07
         fig.add_trace(go.Bar(
             x=[width], y=["bracket"], orientation="h",
             marker={
                 "color": fill,
-                "line": {"color": future_line if status == "future" else gap_line, "width": 1.5},
+                "line": {"color": line_color, "width": line_width},
             },
             text=f"{brackets[i]['rate']*100:.0f}%" if show_label else "",
             textposition="inside",
-            insidetextfont={"color": "#f8fafc" if status != "future" else _CHART_TEXT_COLOR, "size": 13},
+            insidetextfont={"color": "#f8fafc", "size": 13},
             customdata=[f"{brackets[i]['rate']*100:.0f}% bracket ({range_label})<br>{detail}"],
             hovertemplate="%{customdata}<extra></extra>",
             showlegend=False,

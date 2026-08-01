@@ -1,49 +1,50 @@
 from dash import html
 import dash_bootstrap_components as dbc
 
+
+def _nav_link(icon_class, label, href):
+    # The label is its own element (not a bare string) so the collapsed
+    # (icon-only) state can hide just the text via CSS, without touching the
+    # icon — keeping every icon's position identical whether the sidebar is
+    # expanded or collapsed.
+    return dbc.NavLink(
+        [
+            html.I(className=f"bi {icon_class} sidebar-nav-icon"),
+            html.Span(label, className="sidebar-nav-label"),
+        ],
+        href=href, active="exact", className="sidebar-nav-link",
+    )
+
+
 def render_sidebar():
     return html.Div(
         [
-            html.Div("NC Dash Plan", className="sidebar-brand"),
-            html.Hr(style={"borderColor": "rgba(255,255,255,0.08)", "margin": "0 0 20px 0"}),
+            html.Div(
+                [
+                    # Placeholder brand mark — swap for a real logo later.
+                    html.I(className="bi bi-bar-chart-steps sidebar-logo-icon"),
+                    html.Button(
+                        html.I(className="bi bi-layout-sidebar"),
+                        id="sidebar-collapse-toggle",
+                        n_clicks=0,
+                        className="sidebar-collapse-btn",
+                        title="Collapse sidebar",
+                    ),
+                ],
+                className="sidebar-brand-row",
+            ),
+            html.Hr(className="sidebar-divider"),
             dbc.Nav(
                 [
-                    dbc.NavLink(
-                        [html.I(className="bi bi-speedometer2 me-2"), "Overview"],
-                        href="/", active="exact", className="sidebar-nav-link"
-                    ),
-                    dbc.NavLink(
-                        [html.I(className="bi bi-person-fill me-2"), "Personal Finances"],
-                        href="/personal", active="exact", className="sidebar-nav-link"
-                    ),
-                    dbc.NavLink(
-                        [html.I(className="bi bi-briefcase-fill me-2"), "Business Planning"],
-                        href="/business", active="exact", className="sidebar-nav-link"
-                    ),
-                    dbc.NavLink(
-                        [html.I(className="bi bi-calculator-fill me-2"), "Tax Planning"],
-                        href="/taxes", active="exact", className="sidebar-nav-link"
-                    ),
-                    dbc.NavLink(
-                        [html.I(className="bi bi-bank2 me-2"), "Net Worth Tracking"],
-                        href="/networth", active="exact", className="sidebar-nav-link"
-                    ),
-                    dbc.NavLink(
-                        [html.I(className="bi bi-cash-coin me-2"), "Business Valuation"],
-                        href="/valuation", active="exact", className="sidebar-nav-link"
-                    ),
-                    dbc.NavLink(
-                        [html.I(className="bi bi-grid-3x3-gap-fill me-2"), "Forecast Spreadsheet"],
-                        href="/forecast", active="exact", className="sidebar-nav-link"
-                    ),
-                    dbc.NavLink(
-                        [html.I(className="bi bi-sliders2 me-2"), "Scenario Manager"],
-                        href="/scenarios", active="exact", className="sidebar-nav-link"
-                    ),
-                    dbc.NavLink(
-                        [html.I(className="bi bi-gear-fill me-2"), "Settings"],
-                        href="/settings", active="exact", className="sidebar-nav-link"
-                    ),
+                    _nav_link("bi-speedometer2", "Overview", "/"),
+                    _nav_link("bi-person-fill", "Personal Finances", "/personal"),
+                    _nav_link("bi-briefcase-fill", "Business Planning", "/business"),
+                    _nav_link("bi-calculator-fill", "Tax Planning", "/taxes"),
+                    _nav_link("bi-bank2", "Net Worth Tracking", "/networth"),
+                    _nav_link("bi-cash-coin", "Business Valuation", "/valuation"),
+                    _nav_link("bi-grid-3x3-gap-fill", "Forecast Spreadsheet", "/forecast"),
+                    _nav_link("bi-sliders2", "Scenario Manager", "/scenarios"),
+                    _nav_link("bi-gear-fill", "Settings", "/settings"),
                 ],
                 vertical=True,
                 pills=True,
@@ -51,4 +52,5 @@ def render_sidebar():
         ],
         id="app-sidebar",
         className="sidebar-container",
+        n_clicks=0,
     )

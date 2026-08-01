@@ -44,7 +44,7 @@ def _render_readonly_ledger(rows, col_spec):
         for row in rows
     ])
     return dbc.Table([header, body], striped=True, bordered=False, hover=True,
-                      size="sm", className="text-white mb-0", responsive=True)
+                      size="sm", className="themed-table mb-0", responsive=True)
 
 
 def layout():
