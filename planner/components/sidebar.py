@@ -2,17 +2,18 @@ from dash import html
 import dash_bootstrap_components as dbc
 
 
-def _nav_link(icon_class, label, href):
+def _nav_link(icon_class, label, href, business_only=False):
     # The label is its own element (not a bare string) so the collapsed
     # (icon-only) state can hide just the text via CSS, without touching the
     # icon — keeping every icon's position identical whether the sidebar is
     # expanded or collapsed.
+    classes = "sidebar-nav-link business-only" if business_only else "sidebar-nav-link"
     return dbc.NavLink(
         [
             html.I(className=f"bi {icon_class} sidebar-nav-icon"),
             html.Span(label, className="sidebar-nav-label"),
         ],
-        href=href, active="exact", className="sidebar-nav-link",
+        href=href, active="exact", className=classes,
     )
 
 
@@ -38,11 +39,11 @@ def render_sidebar():
                 [
                     _nav_link("bi-speedometer2", "Overview", "/"),
                     _nav_link("bi-person-fill", "Personal Finances", "/personal"),
-                    _nav_link("bi-briefcase-fill", "Business Planning", "/business"),
+                    _nav_link("bi-briefcase-fill", "Business Planning", "/business", business_only=True),
                     _nav_link("bi-calculator-fill", "Tax Planning", "/taxes"),
                     _nav_link("bi-bank2", "Net Worth Tracking", "/networth"),
-                    _nav_link("bi-cash-coin", "Business Valuation", "/valuation"),
-                    _nav_link("bi-grid-3x3-gap-fill", "Forecast Spreadsheet", "/forecast"),
+                    _nav_link("bi-cash-coin", "Business Valuation", "/valuation", business_only=True),
+                    _nav_link("bi-grid-3x3-gap-fill", "Forecast Spreadsheet", "/forecast", business_only=True),
                     _nav_link("bi-sliders2", "Scenario Manager", "/scenarios"),
                     _nav_link("bi-gear-fill", "Settings", "/settings"),
                 ],

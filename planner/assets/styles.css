@@ -1,5 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
+/* Personal-only "simple mode" (Settings page toggle, see business-mode-store in
+   app.py). Marks nav links, cards, and chart panels that only matter if the
+   user has a business; hiding them is purely cosmetic (display:none), never a
+   calculation gate — the underlying numbers are still computed the same way. */
+html[data-business-mode="false"] .business-only {
+    display: none !important;
+}
+
 :root {
     --bg-primary: #0f172a;
     --bg-secondary: #1e293b;
@@ -103,6 +111,21 @@ h1, h2, h3, h4, h5, h6 {
     border-left-color: var(--accent-emerald);
 }
 .metric-card.purple {
+    border-left-color: var(--accent-purple);
+}
+/* .glass-card:hover sets border-color (all sides) with higher specificity than
+   the plain .metric-card's border-left, so hovering wiped the blue band back to
+   the generic glass border — the emerald/purple variants only survived because
+   their two-class selector happens to tie in specificity and land later in the
+   cascade. Pin border-left-color explicitly on hover so all four metric cards
+   behave the same regardless of color variant. */
+.metric-card:hover {
+    border-left-color: var(--accent-blue);
+}
+.metric-card.emerald:hover {
+    border-left-color: var(--accent-emerald);
+}
+.metric-card.purple:hover {
     border-left-color: var(--accent-purple);
 }
 
@@ -350,7 +373,6 @@ h1, h2, h3, h4, h5, h6 {
     border-left: 4px solid var(--accent-purple);
     border-radius: 0 12px 12px 0;
     padding: 20px;
-    margin-top: 16px;
 }
 
 

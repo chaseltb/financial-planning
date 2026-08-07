@@ -241,14 +241,16 @@ def calculate_federal_tax(
     
     total_personal_income_tax = ordinary_tax + cap_gains_tax
 
-    # Employee-side FICA; unlike SE tax, not AGI-deductible. Scoped to the wages this
-    # business itself pays the owner through payroll (owner_w2_salary) — an outside
-    # W-2 job's FICA is already withheld and remitted by that employer, so it isn't
-    # this business owner's payroll to model here (w2_personal may also include that
-    # outside-job total, which stays in ordinary income tax but not this FICA calc).
+    # Employee-side FICA; unlike SE tax, not AGI-deductible. Applies to ALL W-2
+    # wages the taxpayer receives — an outside job's Social Security/Medicare is
+    # withheld and remitted by that employer rather than this app's modeled
+    # business, but it's still real tax the taxpayer pays, so it belongs in their
+    # combined tax liability. (This is separate from employer_payroll_tax above,
+    # which stays scoped to owner_w2_salary only — this app only models the
+    # *business's own* employer-match obligation, not an outside employer's.)
     payroll_tax = 0.0
-    if owner_w2_salary > 0:
-        payroll_calc = calculate_payroll_tax(owner_w2_salary, filing_status, rules)
+    if w2_personal > 0:
+        payroll_calc = calculate_payroll_tax(w2_personal, filing_status, rules)
         payroll_tax = payroll_calc["value"]
 
     # Total combined tax (personal income tax + payroll/SE taxes + corporate taxes)
@@ -294,9 +296,9 @@ def calculate_federal_tax(
     if total_se_tax > 0:
         steps.append(f"Self-Employment Tax = ${total_se_tax:,.2f}")
     if payroll_tax > 0:
-        steps.append(f"Employee Payroll Tax (FICA) on Owner's Business W-2 Wages (${owner_w2_salary:,.2f}) = ${payroll_tax:,.2f}")
+        steps.append(f"Employee Payroll Tax (FICA) on Total W-2 Wages (${w2_personal:,.2f}) = ${payroll_tax:,.2f}")
     if employer_payroll_tax > 0:
-        steps.append(f"Employer Payroll Tax Match (FICA) on Owner W-2 Wages = ${employer_payroll_tax:,.2f}")
+        steps.append(f"Employer Payroll Tax Match (FICA) on Owner's Business W-2 Wages Only = ${employer_payroll_tax:,.2f}")
 
     steps.append(f"Combined Total Tax (Personal + SE + Payroll + Corporate) = ${combined_tax:,.2f}")
 

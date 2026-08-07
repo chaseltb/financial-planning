@@ -8,14 +8,19 @@ import plotly.graph_objects as go
 
 from planner.components.cards import render_metric_card, render_chip_row
 from planner.components.charts import create_sensitivity_chart, apply_dark_layout
+from planner.components.business_gate import render_business_gate, register_business_gate
 from planner.engines.runner import run_all_engines
 from planner.data_manager import save_or_mark_unsaved
 
 dash.register_page(__name__, path="/valuation", title="Valuation")
 
+_CONTENT_ID = "valuation-page-content"
+
 def layout():
     return dbc.Container(
         [
+            render_business_gate(_CONTENT_ID, "Business Valuation"),
+            html.Div(id=_CONTENT_ID, children=[
             html.Div(
                 [
                     html.Div("OUR BEST ESTIMATE (EBITDA MULTIPLE)", className="text-muted",
@@ -184,9 +189,13 @@ def layout():
                     ),
                 ]
             ),
+            ]),
         ],
         fluid=True,
     )
+
+
+register_business_gate(_CONTENT_ID)
 
 
 @callback(

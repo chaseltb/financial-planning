@@ -116,7 +116,35 @@ def run_forecast(
     }
     
     filing_status = personal_profile.get("filing_status", "single")
-    
+
+    # Baseline tax this taxpayer would owe with NO business activity at all (just
+    # their outside income — W-2 job, interest, dividends, etc.). Doesn't change
+    # quarter to quarter, so it's computed once here rather than inside the loop.
+    # Used below to isolate the tax the business itself actually causes, instead
+    # of "Tax estimate" bundling in personal tax the taxpayer would owe regardless
+    # of whether this business existed (their outside job's income tax and FICA,
+    # personal investment income tax, etc.) — that overstated every quarter's
+    # business tax estimate by the taxpayer's entire non-business tax bill.
+    baseline_fed_tax_calc = calculate_federal_tax(
+        personal_income=personal_income_base,
+        business_net_income=0.0,
+        business_entity=entity_type,
+        owner_w2_salary=0.0,
+        ownership_pct=ownership_pct,
+        retirement_contributions=retirement_contributions,
+        filing_status=filing_status,
+        rules=fed_rules,
+    )
+    baseline_nc_tax_calc = calculate_nc_tax(
+        federal_agi=baseline_fed_tax_calc["agi"],
+        gross_cap_gains_and_div=personal_income_base.get("Capital gains", 0.0) + personal_income_base.get("Dividends", 0.0),
+        business_net_income=0.0,
+        business_entity=entity_type,
+        filing_status=filing_status,
+        rules=nc_rules,
+    )
+    baseline_annual_combined_tax = baseline_fed_tax_calc["combined_tax"] + baseline_nc_tax_calc["combined_tax"]
+
     for _ in range(horizon):
         next_q = get_next_quarter(current_quarter)
         q_overrides = overrides.get(next_q, {})
@@ -137,10 +165,6 @@ def run_forecast(
         # 2. Estimate taxes dynamically using engines
         # Payroll is assumed not to include owner salary, so net income = EBITDA - Owner Salary.
         net_biz_income_quarter = ebitda - owner_salary
-
-        # Distributions = this owner's pro-rata share of net income, assumed fully paid
-        # out in cash each quarter (unless a manual override is set for this quarter).
-        distributions = q_overrides.get("Distributions", max(0.0, net_biz_income_quarter) * ownership_pct)
 
         # Annualize net profit and owner salary to run tax engine
         annual_net_biz_income = net_biz_income_quarter * 4
@@ -172,16 +196,27 @@ def run_forecast(
             rules=nc_rules
         )
         
-        # "Tax estimate" is shown for reference only, not deducted from business Cash below:
-        # pass-through owners already pay it personally out of distributions.
+        # "Tax estimate" is the tax the BUSINESS itself is responsible for — total
+        # household tax minus the baseline tax owed with no business activity —
+        # shown for reference only, not deducted from business Cash below (pass-
+        # through owners already pay it personally out of distributions).
         annual_combined_tax = fed_tax_calc["combined_tax"] + nc_tax_calc["combined_tax"]
-        tax_estimate = q_overrides.get("Tax estimate", annual_combined_tax / 4.0)
+        annual_business_tax = max(0.0, annual_combined_tax - baseline_annual_combined_tax)
+        tax_estimate = q_overrides.get("Tax estimate", annual_business_tax / 4.0)
 
         # Only the business's own tax obligations (corporate tax, employer FICA match) hit business cash.
         annual_business_cash_tax = (
             fed_tax_calc["corporate_tax"] + nc_tax_calc["corporate_tax"] + fed_tax_calc["employer_payroll_tax"]
         )
         business_tax_outflow = annual_business_cash_tax / 4.0
+
+        # Distributions = this owner's pro-rata share of net income *after* the business's
+        # own tax bill (corporate tax, employer FICA match) — computed here rather than
+        # straight off EBITDA-minus-salary, so the business isn't distributing cash it still
+        # owes the IRS/NC DOR. Skipping the tax deduction here was why C-Corp scenarios (which
+        # owe real corporate tax) bled cash every quarter even at a stable, growing revenue.
+        distributable = max(0.0, net_biz_income_quarter - business_tax_outflow)
+        distributions = q_overrides.get("Distributions", distributable * ownership_pct)
 
         # 3. Project Cash
         # Cash Flow = Revenue - COGS - Payroll - Expenses - CapEx - Owner salary - Distributions - Business-level taxes

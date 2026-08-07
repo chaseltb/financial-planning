@@ -35,6 +35,13 @@ app.layout = html.Div(
         dcc.Store(id="theme-store", data="dark", storage_type="local"),
         dcc.Store(id="autosave-enabled-store", data=True, storage_type="local"),
         dcc.Store(id="sidebar-collapsed-store", data=False, storage_type="local"),
+        # Personal-only "simple mode" toggle, set on the Settings page. True (the
+        # default) shows everything as today; False hides business-only nav links,
+        # cards, and explanations app-wide via the [data-business-mode] CSS
+        # selector below — a pure display toggle, no engine/calculation is gated
+        # on it, so personal numbers are always computed exactly the same way and
+        # re-enabling it instantly restores every hidden business element.
+        dcc.Store(id="business-mode-store", data=True, storage_type="local"),
         dcc.Store(id="mobile-nav-open-store", data=False),
         html.Div(id="theme-applier", style={"display": "none"}),
 
@@ -62,6 +69,21 @@ app.clientside_callback(
     """,
     Output("theme-applier", "data-theme"),
     Input("theme-store", "data"),
+)
+
+# Applies business-mode-store to <html data-business-mode="..."> the same way the
+# theme does, so `[data-business-mode="false"] .business-only { display: none }`
+# in styles.css can hide every business-only element (nav links, cards, chart
+# panels) app-wide from one flag, without a Python callback per page.
+app.clientside_callback(
+    """
+    function(businessModeEnabled) {
+        document.documentElement.setAttribute('data-business-mode', businessModeEnabled === false ? 'false' : 'true');
+        return '';
+    }
+    """,
+    Output("theme-applier", "data-business-mode"),
+    Input("business-mode-store", "data"),
 )
 
 # Reads current state rather than toggling a click count, since a plain odd/even

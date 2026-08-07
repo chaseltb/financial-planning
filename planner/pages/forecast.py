@@ -9,11 +9,14 @@ import pandas as pd
 
 from planner.components.charts import apply_dark_layout
 from planner.components.editable_table import render_editable_table
+from planner.components.business_gate import render_business_gate, register_business_gate
 from planner.data_manager import load_tax_rules, save_or_mark_unsaved
 from planner.config import DEFAULT_TAX_YEAR, DEFAULT_STATE
 from planner.engines.forecast import run_forecast, NUMERIC_COLS
 
 dash.register_page(__name__, path="/forecast", title="Business Financial Projection Spreadsheet")
+
+_CONTENT_ID = "forecast-page-content"
 
 _FC_COLS = [
     {"name": "Quarter",          "id": "Quarter",               "editable": False, "type": "text"},
@@ -34,6 +37,8 @@ _FC_COLS = [
 def layout():
     return dbc.Container(
         [
+            render_business_gate(_CONTENT_ID, "The Financial Projection Spreadsheet"),
+            html.Div(id=_CONTENT_ID, children=[
             dbc.Row(
                 dbc.Col(
                     html.Div(
@@ -118,9 +123,13 @@ def layout():
                     ),
                 ]
             ),
+            ]),
         ],
         fluid=True,
     )
+
+
+register_business_gate(_CONTENT_ID)
 
 
 def _run_forecast(state, horizon):

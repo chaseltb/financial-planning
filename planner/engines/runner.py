@@ -126,6 +126,37 @@ def run_all_engines(
 
     combined_tax = fed_tax["combined_tax"] + nc_tax["combined_tax"]
 
+    # Tax the BUSINESS itself is responsible for: total household tax minus what
+    # this taxpayer would owe with no business activity at all (just their outside
+    # W-2 job, interest, dividends, etc.). Without this, a business summary card
+    # showing the raw combined_tax bundles in personal tax that has nothing to do
+    # with the business and would be owed regardless of whether it existed.
+    baseline_income_map = dict(personal_income_map)
+    baseline_income_map["W-2"] = personal_income_map.get("W-2", 0.0) - owner_w2_salary
+    baseline_fed_tax = calculate_federal_tax(
+        personal_income=baseline_income_map,
+        business_net_income=0.0,
+        business_entity=entity_type,
+        owner_w2_salary=0.0,
+        ownership_pct=ownership_pct,
+        retirement_contributions=retirement,
+        filing_status=filing_status,
+        rules=fed_rules,
+    )
+    baseline_nc_tax = calculate_nc_tax(
+        federal_agi=baseline_fed_tax["agi"],
+        gross_cap_gains_and_div=(
+            personal_income_map.get("Capital gains", 0.0)
+            + personal_income_map.get("Dividends", 0.0)
+        ),
+        business_net_income=0.0,
+        business_entity=entity_type,
+        filing_status=filing_status,
+        rules=nc_rules,
+    )
+    baseline_combined_tax = baseline_fed_tax["combined_tax"] + baseline_nc_tax["combined_tax"]
+    business_attributable_tax = max(0.0, combined_tax - baseline_combined_tax)
+
     # ── Cash Flow & Budget Allocation ────────────────────────────────────────
     cashflow = calculate_combined_cashflow(
         personal_income=state["income"],
@@ -154,6 +185,7 @@ def run_all_engines(
         "fed_tax": fed_tax,
         "nc_tax": nc_tax,
         "combined_tax": combined_tax,
+        "business_attributable_tax": business_attributable_tax,
         "effective_rate": fed_tax.get("combined_effective_tax_rate", 0.0),
         # Cash Flow / Budget Allocation
         "cashflow": cashflow,
