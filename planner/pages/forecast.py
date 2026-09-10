@@ -9,11 +9,14 @@ import pandas as pd
 
 from planner.components.charts import apply_dark_layout
 from planner.components.editable_table import render_editable_table
+from planner.components.business_gate import render_business_gate, register_business_gate
 from planner.data_manager import load_tax_rules, save_or_mark_unsaved
 from planner.config import DEFAULT_TAX_YEAR, DEFAULT_STATE
 from planner.engines.forecast import run_forecast, NUMERIC_COLS
 
-dash.register_page(__name__, path="/forecast", title="Forecast")
+dash.register_page(__name__, path="/forecast", title="Business Financial Projection Spreadsheet")
+
+_CONTENT_ID = "forecast-page-content"
 
 _FC_COLS = [
     {"name": "Quarter",          "id": "Quarter",               "editable": False, "type": "text"},
@@ -34,6 +37,8 @@ _FC_COLS = [
 def layout():
     return dbc.Container(
         [
+            render_business_gate(_CONTENT_ID, "The Financial Projection Spreadsheet"),
+            html.Div(id=_CONTENT_ID, children=[
             dbc.Row(
                 dbc.Col(
                     html.Div(
@@ -57,7 +62,9 @@ def layout():
                                                     {"label": "4 Quarters (1 Year)",  "value": 4},
                                                     {"label": "8 Quarters (2 Years)", "value": 8},
                                                     {"label": "12 Quarters (3 Years)","value": 12},
+                                                    {"label": "16 Quarters (4 Years)","value": 16},
                                                     {"label": "20 Quarters (5 Years)","value": 20},
+                                                    {"label": "40 Quarters (10 Years)","value": 40},
                                                 ],
                                                 value=8,
                                                 clearable=False,
@@ -92,11 +99,7 @@ def layout():
             ),
             dbc.Row(
                 dbc.Col(
-                    html.Div(
-                        [html.H4("Financial Model Spreadsheet", className="mb-3"),
-                         html.Div(id="forecast-spreadsheet-container")],
-                        className="glass-card mb-4",
-                    ),
+                    html.Div(id="forecast-spreadsheet-container", className="mb-4"),
                     width=12,
                 )
             ),
@@ -120,9 +123,13 @@ def layout():
                     ),
                 ]
             ),
+            ]),
         ],
         fluid=True,
     )
+
+
+register_business_gate(_CONTENT_ID)
 
 
 def _run_forecast(state, horizon):
@@ -196,6 +203,10 @@ def update_horizon_store(val):
     return val or 8
 
 
+_OVERRIDE_FIELDS = ["Revenue", "COGS", "Payroll", "Expenses",
+                    "Capital expenditures", "Owner salary", "Distributions"]
+
+
 @callback(
     Output("project-state-store", "data", allow_duplicate=True),
     Output("save-status-indicator", "children", allow_duplicate=True),
@@ -203,31 +214,85 @@ def update_horizon_store(val):
     State("project-state-store", "data"),
     State("active-scenario-store", "data"),
     State("autosave-enabled-store", "data"),
+    State("forecast-horizon-dropdown", "value"),
     prevent_initial_call=True,
 )
-def persist_forecast_edits(forecast_data, current_state, active_scenario, autosave_enabled):
+def persist_forecast_edits(forecast_data, current_state, active_scenario, autosave_enabled, horizon):
     # forecast_data is None when the table is in empty-state mode (no DataTable rendered)
-    if current_state is None or forecast_data is None:
+    if current_state is None or forecast_data is None or not forecast_data:
         return no_update, no_update
 
     ctx = callback_context
     if not ctx.triggered:
         return no_update, no_update
 
-    # Only process rows that have been edited (non-empty Quarter)
-    if not forecast_data:
-        return no_update, no_update
-
     new_state = copy.deepcopy(current_state)
-    hist_rows = [r for r in forecast_data if "2025" in str(r.get("Quarter", ""))]
-    new_state["forecast"] = hist_rows
+    horizon = horizon or 8
+
+    # Historical quarters are whatever's actually stored as history, not a hardcoded
+    # year — a hardcoded "2025" check would misclassify every quarter once history
+    # accumulates rows in 2026+ years, and would freeze *every* still-projected
+    # quarter (not just the one the user actually touched) as a permanent override
+    # the moment any cell in the table was edited, since the DataTable reports the
+    # full grid on every edit. That's what silently stopped revenue from carrying
+    # forward: a single edit would snapshot every future quarter at its
+    # already-displayed value forever, regardless of growth-rate changes afterward.
+    hist_rows_by_quarter = {r.get("Quarter"): dict(r) for r in new_state.get("forecast", [])}
+    hist_quarters = set(hist_rows_by_quarter.keys())
+
+    for row in forecast_data:
+        q = row.get("Quarter")
+        if q in hist_quarters:
+            merged = hist_rows_by_quarter[q]
+            for col in NUMERIC_COLS:
+                if col in row and row[col] is not None:
+                    try:
+                        merged[col] = float(row[col])
+                    except (TypeError, ValueError):
+                        pass
+    new_state["forecast"] = [hist_rows_by_quarter[q] for q in sorted(hist_quarters)]
+
+    # Recompute a clean (override-free) projection to diff the edited grid against,
+    # so only cells the user actually changed become overrides — every other future
+    # quarter keeps recomputing from the growth-rate assumptions.
+    tax_year = int(new_state.get("assumptions", {}).get("tax_year", DEFAULT_TAX_YEAR))
+    rules = load_tax_rules(tax_year, DEFAULT_STATE)
+    history_df = pd.DataFrame(new_state["forecast"])
+    for col in NUMERIC_COLS:
+        if col in history_df.columns:
+            history_df[col] = pd.to_numeric(history_df[col], errors="coerce").fillna(0.0)
+
+    baseline = run_forecast(
+        history_df=history_df,
+        business_profile=new_state["business"],
+        personal_profile=new_state["profile"],
+        personal_income_list=new_state["income"],
+        assumptions=new_state["assumptions"],
+        fed_rules=rules["federal"],
+        nc_rules=rules["north_carolina"],
+        horizon=horizon,
+        overrides={},
+    )
+    baseline_by_quarter = {r["Quarter"]: r for r in baseline["only_forecast_df"].to_dict("records")}
+
     overrides = {}
     for row in forecast_data:
-        q = str(row.get("Quarter", ""))
-        if "2025" not in q:
-            overrides[q] = {k: float(row.get(k, 0) or 0)
-                             for k in ["Revenue", "COGS", "Payroll", "Expenses",
-                                       "Capital expenditures", "Owner salary", "Distributions"]}
+        q = row.get("Quarter")
+        if q in hist_quarters:
+            continue
+        baseline_row = baseline_by_quarter.get(q)
+        if baseline_row is None:
+            continue
+        q_overrides = {}
+        for field in _OVERRIDE_FIELDS:
+            try:
+                edited_val = float(row.get(field, 0) or 0)
+            except (TypeError, ValueError):
+                continue
+            if abs(edited_val - float(baseline_row.get(field, 0.0))) > 0.005:
+                q_overrides[field] = edited_val
+        if q_overrides:
+            overrides[q] = q_overrides
     new_state["assumptions"]["forecast_overrides"] = overrides
 
     label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)

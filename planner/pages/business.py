@@ -6,27 +6,32 @@ from dash import html, dcc, callback, callback_context, Input, Output, State, AL
 import dash_bootstrap_components as dbc
 
 from planner.components.charts import create_business_trend
+from planner.components.business_gate import render_business_gate, register_business_gate
 from planner.engines.runner import run_all_engines
 from planner.engines.forecast import DEFAULT_SEED
 from planner.data_manager import save_or_mark_unsaved
 
 dash.register_page(__name__, path="/business", title="Business Planning")
 
+_CONTENT_ID = "business-page-content"
+
 
 def layout():
     return dbc.Container(
         [
+            render_business_gate(_CONTENT_ID, "Business Planning"),
+            html.Div(id=_CONTENT_ID, children=[
             dbc.Alert(
-                [
+                id="business-empty-alert",
+                children=[
                     html.I(className="bi bi-info-circle me-2"),
-                    "The Baseline scenario has no business activity by default. Switch to the "
-                    "\"NC Median + $10k Side Hustle\" scenario (top of the page) to see an example "
-                    "small side-hustle business filled in here, an assumption, not Census or "
-                    "industry data. Replace any of these numbers with your own below.",
+                    "No business activity has been entered yet — the numbers below are all zero. "
+                    "Fill in your revenue, expenses, and other run-rate financials below to model "
+                    "your own business.",
                 ],
                 color="secondary",
                 className="mb-3",
-                style={"fontSize": "0.85rem"},
+                style={"fontSize": "0.85rem", "display": "none"},
             ),
             dbc.Row(
                 [
@@ -68,7 +73,12 @@ def layout():
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
-                                    className="mb-3"
+                                    className="mb-1"
+                                ),
+                                html.Div(
+                                    id="owner-salary-inapplicable-note",
+                                    className="text-warning mb-3",
+                                    style={"fontSize": "0.8rem", "display": "none"},
                                 ),
                                 dbc.Tooltip(
                                     id="tooltip-owner-salary",
@@ -251,7 +261,7 @@ def layout():
                                                      html.H3(id="biz-distributions-val", style={"fontWeight": "bold"})], width=4),
                                             dbc.Col([html.Div("Employer Payroll Tax (FICA Match)", className="text-muted", style={"fontSize": "0.85rem"}),
                                                      html.H3(id="biz-employer-payroll-val", style={"color": "var(--accent-purple)", "fontWeight": "bold"})], width=4),
-                                            dbc.Col([html.Div("Est. Combined Tax Burden (Fed + NC)", className="text-muted", style={"fontSize": "0.85rem"}),
+                                            dbc.Col([html.Div("Est. Business Tax Burden (Fed + NC)", className="text-muted", style={"fontSize": "0.85rem"}),
                                                      html.H3(id="biz-combined-tax-val", style={"fontWeight": "bold"})], width=4),
                                         ],
                                     ),
@@ -273,9 +283,13 @@ def layout():
                     ),
                 ]
             ),
+            ]),
         ],
         fluid=True,
     )
+
+
+register_business_gate(_CONTENT_ID)
 
 
 _OWNER_SALARY_TOOLTIPS = {
@@ -294,6 +308,10 @@ _OWNER_SALARY_TOOLTIPS = {
     Output({"type": "business-input", "field": "revenue_growth"}, "value"),
     Output({"type": "business-input", "field": "expense_growth"}, "value"),
     Output("tooltip-owner-salary", "children"),
+    Output({"type": "business-input", "field": "owner_salary"}, "disabled"),
+    Output("owner-salary-inapplicable-note", "children"),
+    Output("owner-salary-inapplicable-note", "style"),
+    Output("business-empty-alert", "style"),
     Output("biz-ebitda-val",    "children"),
     Output("biz-netincome-val", "children"),
     Output("biz-margin-val",    "children"),
@@ -306,7 +324,7 @@ _OWNER_SALARY_TOOLTIPS = {
 )
 def populate_business_page(state):
     if state is None:
-        return [no_update] * 12
+        return [no_update] * 17
 
     r = run_all_engines(state)
     b = state.get("business", {})
@@ -318,6 +336,21 @@ def populate_business_page(state):
     employer_payroll_tax = r["fed_tax"].get("employer_payroll_tax", 0.0)
     owner_distributions = max(0.0, annual_ni) * ownership_pct
 
+    # Sole props/LLCs can't legally pay the owner W-2 wages — the field is a
+    # no-op for calculations in that case (see _OWNER_SALARY_TOOLTIPS). Rather
+    # than silently ignoring whatever the user types with no visible sign why,
+    # disable the field and say so inline once the entity type doesn't support it.
+    owner_salary_applicable = entity_type in ("S Corporation", "C Corporation")
+    inapplicable_note = (
+        "" if owner_salary_applicable
+        else f"Not applicable for a {entity_type} — this field has no effect on the numbers below."
+    )
+    inapplicable_style = {"fontSize": "0.8rem", "display": "none" if owner_salary_applicable else "block"}
+
+    # A business with any real activity shouldn't keep being told it's empty.
+    has_business_activity = r["revenue_q"] > 0
+    empty_alert_style = {"fontSize": "0.85rem", "display": "none" if has_business_activity else "block"}
+
     return (
         entity_type,
         b.get("owner_salary", 0),
@@ -325,12 +358,16 @@ def populate_business_page(state):
         float(b.get("revenue_growth", 0.05)) * 100,
         float(b.get("expense_growth", 0.03)) * 100,
         _OWNER_SALARY_TOOLTIPS.get(entity_type, _OWNER_SALARY_TOOLTIPS["Sole Proprietorship"]),
+        not owner_salary_applicable,
+        inapplicable_note,
+        inapplicable_style,
+        empty_alert_style,
         f"${annual_ebitda:,.0f}",
         f"${annual_ni:,.0f}",
         f"{margin:.1f}%",
         f"${owner_distributions:,.0f}",
         f"${employer_payroll_tax:,.0f}",
-        f"${r['combined_tax']:,.0f}",
+        f"${r['business_attributable_tax']:,.0f}",
         create_business_trend(r["forecast_df"]),
     )
 

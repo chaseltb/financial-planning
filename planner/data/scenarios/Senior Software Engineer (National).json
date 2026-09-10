@@ -14,7 +14,7 @@
         "id": "inc_3",
         "category": "Dividends",
         "description": "Index Fund Dividends",
-        "amount": 150.0,
+        "amount": 150,
         "frequency": "Annual",
         "taxable": "True"
       },
@@ -33,6 +33,40 @@
         "amount": 0,
         "frequency": "Annual",
         "taxable": "True"
+      }
+    ],
+    "liabilities": [
+      {
+        "id": "liab_2",
+        "category": "Auto loans",
+        "description": "Car Loan (avg auto loan balance, Experian 2024)",
+        "value": "24297.0",
+        "interest_rate": 0.05,
+        "monthly_payment": "458.0"
+      },
+      {
+        "id": "liab_3",
+        "category": "Credit cards",
+        "description": "Credit Card Balance (avg credit card balance, Experian 2024)",
+        "value": "6730.0",
+        "interest_rate": 0.2,
+        "monthly_payment": "200.0"
+      }
+    ],
+    "forecast": [
+      {
+        "Quarter": "2025-Q4",
+        "Revenue": 0,
+        "COGS": 0,
+        "Payroll": 0,
+        "Expenses": 0,
+        "Capital expenditures": 0,
+        "Owner salary": 0,
+        "Distributions": 0,
+        "Tax estimate": 0,
+        "Cash": 0,
+        "EBITDA": 0,
+        "Business value": 0
       }
     ]
   }

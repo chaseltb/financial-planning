@@ -140,6 +140,22 @@ def test_federal_tax_s_corporation():
     assert pytest.approx(res["combined_tax"]) == 49795.72
 
 
+def test_federal_tax_s_corp_owner_with_outside_w2_job():
+    # Owner draws $60k reasonable salary from their S-Corp AND also holds a separate
+    # $80k W-2 job elsewhere. personal_income["W-2"] (as assembled by the runner)
+    # combines both ($140k). Employer-side FICA match only applies to the $60k the
+    # business itself pays the owner — an outside employer pays their own match,
+    # which this app doesn't model. But employee-side FICA is real tax the person
+    # pays regardless of which employer's payroll processed it, so it applies to
+    # the full $140k combined W-2 total, not just the business-paid portion.
+    res = calculate_federal_tax(
+        {"W-2": 140000.0}, 200000.0, "S Corporation", {}, "single", fed_rules_2026,
+        owner_w2_salary=60000.0, ownership_pct=1.0,
+    )
+    assert pytest.approx(res["employer_payroll_tax"]) == 60000.0 * 0.0765
+    assert pytest.approx(res["payroll_tax"]) == 140000.0 * 0.062 + 140000.0 * 0.0145
+
+
 def test_federal_tax_c_corporation_with_partial_ownership():
     # $100k business profit, 50% ownership stake; corporate tax always applies to the full 100%
     res = calculate_federal_tax(

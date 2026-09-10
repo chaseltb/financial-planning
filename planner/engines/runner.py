@@ -9,6 +9,8 @@ from planner.engines.tax.north_carolina import calculate_nc_tax
 from planner.engines.networth import calculate_net_worth, project_net_worth
 from planner.engines.valuation import calculate_valuation, calculate_sensitivity
 from planner.engines.forecast import run_forecast, DEFAULT_SEED, NUMERIC_COLS
+from planner.engines.cashflow import calculate_combined_cashflow
+from planner.engines.allocation import calculate_budget_allocation
 
 
 def run_all_engines(
@@ -122,18 +124,72 @@ def run_all_engines(
     val_result = calculate_valuation(metrics_val, multiples, custom_method)
     sensitivity = calculate_sensitivity(val_result, sensitivity_method, float(sensitivity_range))
 
-    # ── Net Worth ─────────────────────────────────────────────────────────
-    nw_result = calculate_net_worth(state["assets"], state["liabilities"])
-    nw_proj_df = pd.DataFrame(project_net_worth(state["assets"], state["liabilities"], quarters=8))
-
     combined_tax = fed_tax["combined_tax"] + nc_tax["combined_tax"]
+
+    # Tax the BUSINESS itself is responsible for: total household tax minus what
+    # this taxpayer would owe with no business activity at all (just their outside
+    # W-2 job, interest, dividends, etc.). Without this, a business summary card
+    # showing the raw combined_tax bundles in personal tax that has nothing to do
+    # with the business and would be owed regardless of whether it existed.
+    baseline_income_map = dict(personal_income_map)
+    baseline_income_map["W-2"] = personal_income_map.get("W-2", 0.0) - owner_w2_salary
+    baseline_fed_tax = calculate_federal_tax(
+        personal_income=baseline_income_map,
+        business_net_income=0.0,
+        business_entity=entity_type,
+        owner_w2_salary=0.0,
+        ownership_pct=ownership_pct,
+        retirement_contributions=retirement,
+        filing_status=filing_status,
+        rules=fed_rules,
+    )
+    baseline_nc_tax = calculate_nc_tax(
+        federal_agi=baseline_fed_tax["agi"],
+        gross_cap_gains_and_div=(
+            personal_income_map.get("Capital gains", 0.0)
+            + personal_income_map.get("Dividends", 0.0)
+        ),
+        business_net_income=0.0,
+        business_entity=entity_type,
+        filing_status=filing_status,
+        rules=nc_rules,
+    )
+    baseline_combined_tax = baseline_fed_tax["combined_tax"] + baseline_nc_tax["combined_tax"]
+    business_attributable_tax = max(0.0, combined_tax - baseline_combined_tax)
+
+    # ── Cash Flow & Budget Allocation ────────────────────────────────────────
+    cashflow = calculate_combined_cashflow(
+        personal_income=state["income"],
+        personal_expenses=state["expenses"],
+        liabilities=state["liabilities"],
+        retirement_contributions=retirement,
+        tax_result={"combined_tax": combined_tax},
+    )
+    default_allocation_pct = {"Savings": 34.0, "Liability Paydown": 33.0, "Taxable Brokerage": 33.0}
+    allocation_pct = state["profile"].get("budget_allocation", default_allocation_pct)
+    budget_allocation = calculate_budget_allocation(cashflow["value"], allocation_pct)
+
+    # ── Net Worth ─────────────────────────────────────────────────────────
+    # The allocated surplus (savings/brokerage contributions, extra liability
+    # paydown) feeds forward into the projection so it actually shows up in
+    # future net worth, not just as a standalone budget-page number.
+    quarterly_allocation = {k: v / 4.0 for k, v in budget_allocation["amounts"].items()}
+    nw_result = calculate_net_worth(state["assets"], state["liabilities"])
+    nw_proj_df = pd.DataFrame(project_net_worth(
+        state["assets"], state["liabilities"], quarters=8,
+        quarterly_allocation=quarterly_allocation,
+    ))
 
     return {
         # Tax
         "fed_tax": fed_tax,
         "nc_tax": nc_tax,
         "combined_tax": combined_tax,
+        "business_attributable_tax": business_attributable_tax,
         "effective_rate": fed_tax.get("combined_effective_tax_rate", 0.0),
+        # Cash Flow / Budget Allocation
+        "cashflow": cashflow,
+        "budget_allocation": budget_allocation,
         # Business
         "ebitda_q": ebitda_q,
         "revenue_q": revenue_q,

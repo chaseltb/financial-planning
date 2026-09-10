@@ -4,6 +4,7 @@ import csv
 import copy
 import logging
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List
@@ -14,6 +15,15 @@ from planner.config import DATA_DIR, TAX_RULES_DIR, SCENARIOS_DIR, DEFAULT_TAX_Y
 
 logger = logging.getLogger(__name__)
 
+# On Windows, os.replace onto an existing file can transiently raise
+# "[WinError 5] Access is denied" (a PermissionError) when antivirus, the
+# search indexer, or a cloud-sync client (Defender, OneDrive, etc.) briefly
+# holds an exclusive handle on the destination right after it changes.
+# POSIX rename doesn't have this problem. Retry with a short backoff instead
+# of failing the whole save on what's usually a one-off hiccup.
+_REPLACE_RETRY_ATTEMPTS = 5
+_REPLACE_RETRY_BASE_DELAY = 0.1
+
 def _atomic_write(path: Path, write_fn):
     """Writes to a temp file then renames, so a crash mid-write can't corrupt the target."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -21,7 +31,14 @@ def _atomic_write(path: Path, write_fn):
     try:
         with os.fdopen(fd, "w", newline="", encoding="utf-8") as f:
             write_fn(f)
-        os.replace(tmp_name, path)
+        for attempt in range(_REPLACE_RETRY_ATTEMPTS):
+            try:
+                os.replace(tmp_name, path)
+                break
+            except PermissionError:
+                if attempt == _REPLACE_RETRY_ATTEMPTS - 1:
+                    raise
+                time.sleep(_REPLACE_RETRY_BASE_DELAY * (attempt + 1))
     except Exception:
         try:
             os.unlink(tmp_name)

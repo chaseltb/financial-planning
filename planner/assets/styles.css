@@ -1,5 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
+/* Personal-only "simple mode" (Settings page toggle, see business-mode-store in
+   app.py). Marks nav links, cards, and chart panels that only matter if the
+   user has a business; hiding them is purely cosmetic (display:none), never a
+   calculation gate — the underlying numbers are still computed the same way. */
+html[data-business-mode="false"] .business-only {
+    display: none !important;
+}
+
 :root {
     --bg-primary: #0f172a;
     --bg-secondary: #1e293b;
@@ -11,6 +19,11 @@
     --accent-purple: #8b5cf6;
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
+    /* Active sidebar item background. In dark mode --bg-secondary already
+       reads as a clear highlight against --bg-sidebar; in light mode both are
+       white, so light mode gets its own darker shade below instead of reusing
+       --bg-secondary. */
+    --active-nav-bg: var(--bg-secondary);
     --font-heading: 'Outfit', sans-serif;
     --font-body: 'Inter', sans-serif;
 }
@@ -27,6 +40,7 @@
     --border-glass: rgba(15, 23, 42, 0.1);
     --text-primary: #0f172a;
     --text-secondary: #475569;
+    --active-nav-bg: #e2e8f0;
 }
 
 :root[data-theme="light"] .glass-card,
@@ -43,9 +57,20 @@ body {
     overflow-x: hidden;
 }
 
+/* bootswatch SLATE (our Bootstrap base theme) is permanently dark and embosses
+   text-shadow onto headings and buttons — a subtle effect against SLATE's own
+   dark background, but a stray dark smudge once light mode repaints the
+   background underneath it. SLATE has no light variant of its own; it doesn't
+   know about this app's separate light/dark toggle (nav-link gets the same
+   treatment, handled separately on .sidebar-nav-link). */
+.btn {
+    text-shadow: none !important;
+}
+
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading) !important;
     font-weight: 600;
+    text-shadow: none !important;
 }
 
 /* Glassmorphism Cards */
@@ -58,12 +83,24 @@ h1, h2, h3, h4, h5, h6 {
     padding: 24px;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* backdrop-filter creates a new stacking context, so a dropdown's open menu
+       (rendered as a normal descendant, not portalled to <body>) can never paint
+       above a LATER card in the page — that later card's own backdrop-filter
+       layer paints as one atomic unit on top of it regardless of the menu's own
+       z-index. position+z-index here (boosted below on :focus-within) lets the
+       card that currently owns focus — i.e. has an open dropdown — win. */
+    position: relative;
+    z-index: 1;
 }
 
 .glass-card:hover {
     border-color: rgba(255, 255, 255, 0.15);
     box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
     transform: translateY(-2px);
+}
+
+.glass-card:focus-within {
+    z-index: 50;
 }
 
 /* Metric Cards */
@@ -74,6 +111,21 @@ h1, h2, h3, h4, h5, h6 {
     border-left-color: var(--accent-emerald);
 }
 .metric-card.purple {
+    border-left-color: var(--accent-purple);
+}
+/* .glass-card:hover sets border-color (all sides) with higher specificity than
+   the plain .metric-card's border-left, so hovering wiped the blue band back to
+   the generic glass border — the emerald/purple variants only survived because
+   their two-class selector happens to tie in specificity and land later in the
+   cascade. Pin border-left-color explicitly on hover so all four metric cards
+   behave the same regardless of color variant. */
+.metric-card:hover {
+    border-left-color: var(--accent-blue);
+}
+.metric-card.emerald:hover {
+    border-left-color: var(--accent-emerald);
+}
+.metric-card.purple:hover {
     border-left-color: var(--accent-purple);
 }
 
@@ -107,24 +159,65 @@ h1, h2, h3, h4, h5, h6 {
     z-index: 100;
     display: flex;
     flex-direction: column;
+    transition: width 0.2s ease, padding 0.2s ease;
 }
 
-.sidebar-brand {
-    font-family: var(--font-heading);
-    font-weight: 800;
-    font-size: 1.4rem;
-    letter-spacing: -0.02em;
+.sidebar-brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    /* Fixed height so toggling .collapsed never changes this row's height —
+       that would shift every nav icon below it, which is exactly what
+       "icons stay in the same vertical position" rules out. */
+    height: 32px;
+}
+
+.sidebar-logo-icon {
+    font-size: 1.5rem;
+    line-height: 1;
     background: linear-gradient(135deg, #3b82f6, #10b981);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin-bottom: 32px;
-    text-align: center;
+    flex-shrink: 0;
+}
+
+.sidebar-collapse-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 6px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-collapse-btn:hover {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.sidebar-divider {
+    border: none;
+    border-top: 1px solid var(--border-glass);
+    margin: 0 0 20px 0;
 }
 
 .sidebar-nav-link {
     background-color: transparent !important;
     background-image: none !important;
-    border: none !important;
+    /* bootswatch SLATE's base .nav-link also ships a hardcoded dark
+       text-shadow, tuned for text sitting on SLATE's own dark gradient — left
+       in place it reads as a stray smudge behind the label once light mode
+       repaints the background underneath it. */
+    text-shadow: none !important;
+    border: 1px solid transparent !important;
     color: var(--text-secondary) !important;
     text-decoration: none !important;
     padding: 12px 16px;
@@ -134,19 +227,78 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     align-items: center;
     gap: 12px;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     margin-bottom: 6px;
 }
 
-.sidebar-nav-link:hover, .sidebar-nav-link.active {
+.sidebar-nav-icon {
+    flex-shrink: 0;
+    width: 1.1em;
+    text-align: center;
+}
+
+.sidebar-nav-label {
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.sidebar-nav-link:hover {
     background-color: var(--bg-secondary) !important;
     color: var(--text-primary) !important;
 }
 
+/* A full highlighted pill around the active item, not a left-border accent
+   (which shifted the whole row instead of just marking it). Uses
+   --active-nav-bg rather than --bg-secondary — in light mode those are both
+   plain white, which left the "highlight" with no visible contrast at all. */
 .sidebar-nav-link.active {
-    border-left: 3px solid var(--accent-blue);
-    border-radius: 0 8px 8px 0;
-    padding-left: 13px;
+    background-color: var(--active-nav-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-glass) !important;
+}
+
+/* Collapsed = icon-only rail. Only the label text disappears (display:none —
+   it never affects layout height) and the container narrows; every icon
+   keeps the exact padding/row-height it had expanded, so nothing shifts
+   vertically. */
+.sidebar-container.collapsed {
+    width: 76px;
+    padding-left: 12px;
+    padding-right: 12px;
+    cursor: pointer;
+}
+
+/* Collapsed: only the logo shows, centered where the row used to have two
+   items side by side. Hovering anywhere on the sidebar swaps it for the
+   expand button in that same spot; clicking anywhere (see app.py's
+   clientside callback) expands the sidebar back to full width. */
+.sidebar-container.collapsed .sidebar-brand-row {
+    justify-content: center;
+}
+
+.sidebar-container.collapsed .sidebar-collapse-btn {
+    display: none;
+}
+
+.sidebar-container.collapsed:hover .sidebar-logo-icon {
+    display: none;
+}
+
+.sidebar-container.collapsed:hover .sidebar-collapse-btn {
+    display: inline-flex;
+}
+
+.sidebar-container.collapsed .sidebar-nav-label {
+    display: none;
+}
+
+.sidebar-container.collapsed .sidebar-nav-link {
+    justify-content: center;
+    gap: 0;
+}
+
+.sidebar-container.collapsed ~ .main-content {
+    margin-left: 76px;
 }
 
 /* Main Content Area */
@@ -186,14 +338,43 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 600 !important;
 }
 
+/* Plain read-only dbc.Table instances (net worth ledgers, scenario comparison).
+   bootswatch SLATE styles bare Bootstrap tables as permanently dark — these
+   previously papered over that with a hardcoded `.text-white`, which worked
+   in dark mode by coincidence but left light mode with white text on
+   SLATE's own dark table background (never actually re-themed). */
+.themed-table {
+    color: var(--text-primary) !important;
+}
+
+.themed-table > thead > tr > th {
+    background-color: transparent !important;
+    color: var(--text-secondary) !important;
+    border-bottom: 1px solid var(--border-glass) !important;
+}
+
+.themed-table > tbody > tr > td {
+    background-color: transparent !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-glass) !important;
+}
+
+.themed-table.table-striped > tbody > tr:nth-of-type(odd) > td {
+    background-color: var(--bg-primary) !important;
+}
+
+.themed-table.table-hover > tbody > tr:hover > td {
+    background-color: var(--bg-secondary) !important;
+}
+
 /* Explain panel styling */
 .explain-panel {
     background: var(--bg-sidebar);
     border-left: 4px solid var(--accent-purple);
     border-radius: 0 12px 12px 0;
     padding: 20px;
-    margin-top: 16px;
 }
+
 
 .explain-header {
     font-family: var(--font-heading);
@@ -319,6 +500,26 @@ input.form-control, select.form-select {
         box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
     }
 
+    /* The desktop icon-rail collapse is a separate concern from the mobile
+       off-canvas nav (which is already either fully open or fully hidden) —
+       don't let a persisted collapsed=true narrow the nav down to icons here. */
+    .sidebar-container.collapsed {
+        width: 260px;
+    }
+
+    .sidebar-container.collapsed .sidebar-nav-label {
+        display: inline;
+    }
+
+    .sidebar-container.collapsed .sidebar-nav-link {
+        justify-content: flex-start;
+        gap: 12px;
+    }
+
+    .sidebar-collapse-btn {
+        display: none;
+    }
+
     .mobile-nav-backdrop.visible {
         display: block;
         position: fixed;
@@ -358,14 +559,18 @@ input.form-control, select.form-select {
 
 /* Dash DataTable — editable cell fix. The <input> a cell swaps in while
    you're typing renders with the browser's own default colors (usually dark
-   text on a white or transparent field), ignoring this app's dark theme.
-   That made the value nearly invisible while editing. Force it to match the
-   same dark background and light text as every other cell. */
+   text on a white or transparent field), ignoring this app's theme — it
+   doesn't inherit the td-level theming above. That made the value nearly
+   invisible while editing. Force it to match the surrounding cell instead.
+   Hardcoded to dark-mode colors before, so it stayed dark (and unreadable:
+   near-white text on a light-mode cell) regardless of the light/dark toggle —
+   use the theme variables so this actually tracks the toggle like every
+   other themed element. */
 .dash-table-container input,
 .dash-table-container textarea {
-    background-color: #1e293b !important;
-    color: #f8fafc !important;
-    caret-color: #f8fafc !important;
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    caret-color: var(--text-primary) !important;
 }
 
 /* The tooltip bubble that appears on column-header hover also inherits

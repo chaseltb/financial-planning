@@ -2,6 +2,22 @@
   "name": "C-Corp with Salary + Dividends",
   "changes": {
     "business.entity_type": "C Corporation",
-    "business.owner_salary": 60000
+    "business.owner_salary": 60000,
+    "forecast": [
+      {
+        "Quarter": "2025-Q4",
+        "Revenue": 0,
+        "COGS": 0,
+        "Payroll": 0,
+        "Expenses": 0,
+        "Capital expenditures": 0,
+        "Owner salary": 0,
+        "Distributions": 0,
+        "Tax estimate": 0,
+        "Cash": 0,
+        "EBITDA": 0,
+        "Business value": 0
+      }
+    ]
   }
 }

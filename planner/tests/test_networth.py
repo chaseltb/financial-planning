@@ -60,3 +60,53 @@ def test_net_worth_negative_when_debt_exceeds_assets():
 
     assert res["value"] == -25000.0
 
+
+def test_projection_routes_savings_and_brokerage_allocation_into_matching_assets():
+    assets = [
+        {"category": "Cash", "description": "Savings", "value": 10000.0, "growth_rate": 0.0},
+        {"category": "Brokerage", "description": "Index Funds", "value": 5000.0, "growth_rate": 0.0},
+    ]
+    liabilities = []
+
+    proj = project_net_worth(
+        assets, liabilities, quarters=2,
+        quarterly_allocation={"Savings": 1000.0, "Taxable Brokerage": 500.0},
+    )
+
+    # Each quarter's allocated contribution compounds into next quarter's total.
+    assert proj[1]["Assets"] == pytest.approx(10000.0 + 1000.0 + 5000.0 + 500.0)
+    assert proj[2]["Assets"] == pytest.approx(10000.0 + 2000.0 + 5000.0 + 1000.0)
+
+
+def test_projection_creates_bucket_when_no_matching_asset_category_exists():
+    # No "Cash" or "Brokerage" category asset exists yet — allocation should still
+    # show up in the projection via a new bucket, not silently disappear.
+    assets = [{"category": "Retirement", "description": "401k", "value": 20000.0, "growth_rate": 0.0}]
+
+    proj = project_net_worth(
+        assets, [], quarters=1,
+        quarterly_allocation={"Savings": 300.0, "Taxable Brokerage": 200.0},
+    )
+
+    assert proj[1]["Assets"] == pytest.approx(20000.0 + 300.0 + 200.0)
+
+
+def test_projection_pays_down_highest_interest_liability_first():
+    liabilities = [
+        {"category": "Auto loans", "description": "Car", "value": 5000.0,
+         "interest_rate": 0.05, "monthly_payment": 0.0},
+        {"category": "Credit cards", "description": "Card", "value": 3000.0,
+         "interest_rate": 0.20, "monthly_payment": 0.0},
+    ]
+
+    proj = project_net_worth(
+        [], liabilities, quarters=1,
+        quarterly_allocation={"Liability Paydown": 1000.0},
+    )
+
+    # $1000 extra paydown must hit the 20% APR card before the 5% APR auto loan.
+    # Auto loan still accrues a quarter of interest untouched by the extra payment.
+    expected_auto = 5000.0 * (1 + 0.05 / 12.0) ** 3
+    expected_card = 3000.0 * (1 + 0.20 / 12.0) ** 3 - 1000.0
+    assert proj[1]["Liabilities"] == pytest.approx(expected_auto + expected_card, rel=1e-3)
+

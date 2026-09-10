@@ -77,20 +77,42 @@ def layout():
                                             style={"color": "#0f172a"}
                                         ),
 
-                                        dbc.Checklist(
-                                            options=[
-                                                {"label": "Enable Autosave", "value": "autosave"}
-                                            ],
-                                            value=["autosave"],
-                                            id="settings-autosave-toggle",
-                                            switch=True,
-                                            className="mb-2"
-                                        ),
                                         html.Div(
-                                            "When off, your edits still apply during this session but "
-                                            "aren't written to disk until you click \"Save Now\".",
-                                            className="text-muted mb-3", style={"fontSize": "0.8rem"},
+                                            [
+                                                dbc.Checklist(
+                                                    options=[
+                                                        {"label": "Enable Autosave", "value": "autosave"}
+                                                    ],
+                                                    value=["autosave"],
+                                                    id="settings-autosave-toggle",
+                                                    switch=True,
+                                                ),
+                                                dbc.Tooltip(
+                                                    "When off, edits apply for this session but aren't written to disk until you click \"Save Now\".",
+                                                    target="settings-autosave-toggle",
+                                                ),
+                                            ],
+                                            className="mb-3",
                                         ),
+
+                                        html.Div(
+                                            [
+                                                dbc.Checklist(
+                                                    options=[
+                                                        {"label": "Enable Business Features", "value": "business"}
+                                                    ],
+                                                    value=["business"],
+                                                    id="settings-business-mode-toggle",
+                                                    switch=True,
+                                                ),
+                                                dbc.Tooltip(
+                                                    "Off hides Business Planning, Valuation, and Forecast everywhere in the app. Your data and personal calculations aren't affected — turn it back on anytime.",
+                                                    target="settings-business-mode-toggle",
+                                                ),
+                                            ],
+                                            className="mb-3",
+                                        ),
+
                                         dbc.Button(
                                             [html.I(className="bi bi-save me-1"), "Save Now"],
                                             id="settings-save-now-btn", color="secondary", size="sm",
@@ -269,6 +291,28 @@ def populate_autosave_toggle(_pathname, enabled):
 )
 def sync_autosave_store_from_toggle(toggle_val):
     return "autosave" in (toggle_val or [])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback: Business Mode toggle (reflects/updates the shared business-mode-store)
+# ─────────────────────────────────────────────────────────────────────────────
+@callback(
+    Output("settings-business-mode-toggle", "value"),
+    Input("url", "pathname"),
+    State("business-mode-store", "data"),
+    prevent_initial_call=False,
+)
+def populate_business_mode_toggle(_pathname, enabled):
+    return ["business"] if enabled is not False else []
+
+
+@callback(
+    Output("business-mode-store", "data"),
+    Input("settings-business-mode-toggle", "value"),
+    prevent_initial_call=True,
+)
+def sync_business_mode_store_from_toggle(toggle_val):
+    return "business" in (toggle_val or [])
 
 
 # ─────────────────────────────────────────────────────────────────────────────

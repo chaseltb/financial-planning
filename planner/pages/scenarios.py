@@ -17,6 +17,18 @@ from planner.engines.runner import run_all_engines
 def _display_label(scenario_name: str) -> str:
     return BASELINE_DISPLAY_NAME if scenario_name == "Baseline" else scenario_name
 
+
+def _empty_state(hint: str) -> html.Div:
+    return html.Div(
+        [
+            html.I(className="bi bi-signpost-split display-6 text-muted mb-3 d-block"),
+            html.P("Nothing to compare yet.", className="text-muted mb-1",
+                   style={"fontSize": "0.95rem", "fontWeight": "600"}),
+            html.P(hint, className="text-muted mb-0", style={"fontSize": "0.85rem"}),
+        ],
+        className="text-center py-4",
+    )
+
 dash.register_page(__name__, path="/scenarios", title="Scenarios")
 
 
@@ -98,6 +110,7 @@ def layout():
                                     className="mb-3"
                                 ),
                                 html.Div(id="scenarios-comparison-table-container", className="mb-4 table-responsive"),
+                                html.Div(id="scenarios-comparison-chart-empty", style={"display": "none"}),
                                 dcc.Graph(id="scenarios-comparison-chart"),
                             ],
                             className="glass-card mb-4",
@@ -117,16 +130,21 @@ def layout():
     Output("scenarios-list-dropdown",             "value"),
     Output("scenarios-action-input",              "value"),
     Output("scenarios-comparison-table-container","children"),
+    Output("scenarios-comparison-chart-empty",    "children"),
+    Output("scenarios-comparison-chart-empty",    "style"),
     Output("scenarios-comparison-chart",          "figure"),
+    Output("scenarios-comparison-chart",          "style"),
     Input("scenarios-create-btn",    "n_clicks"),
     Input("scenarios-duplicate-btn", "n_clicks"),
     Input("scenarios-rename-btn",    "n_clicks"),
     Input("scenarios-delete-btn",    "n_clicks"),
     Input("scenarios-list-dropdown", "value"),
+    Input("business-mode-store",     "data"),
     State("scenarios-action-input",  "value"),
     prevent_initial_call=False,
 )
-def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, action_text):
+def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, business_mode_enabled, action_text):
+    business_enabled = business_mode_enabled is not False
     ctx = callback_context
     triggered = ctx.triggered[0]["prop_id"] if ctx.triggered else ""
     action_text = action_text or ""
@@ -153,13 +171,17 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, actio
         st = load_project_state(scenario_name)
         rr = run_all_engines(st, horizon=4)
         recent = rr["forecast_df"].iloc[-1]
-        return {
+        summary = {
             "Annual Tax":       rr["combined_tax"],
             "Annual EBITDA":    rr["ebitda_q"] * 4.0,
             "Cash Available":   float(recent["Cash"]),
             "Business Value":   rr["val_result"]["valuations"]["EBITDA Multiple"],
             "Net Worth":        rr["nw_result"]["value"],
         }
+        if not business_enabled:
+            summary.pop("Annual EBITDA", None)
+            summary.pop("Business Value", None)
+        return summary
 
     base_s = quick_summary("Baseline")
 
@@ -170,18 +192,16 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, actio
                     "(e.g. \"Hire Engineer\"), then pick it here to see how it changes your numbers.")
         else:
             hint = f"Pick a different scenario from the dropdown above to compare it against {BASELINE_DISPLAY_NAME}."
-        comp_table = html.Div(
-            [
-                html.I(className="bi bi-signpost-split display-6 text-muted mb-3 d-block"),
-                html.P("Nothing to compare yet.", className="text-muted mb-1",
-                       style={"fontSize": "0.95rem", "fontWeight": "600"}),
-                html.P(hint, className="text-muted mb-0", style={"fontSize": "0.85rem"}),
-            ],
-            className="text-center py-4",
+        # Message shown once, in the table's spot; the chart area beneath is just
+        # left blank (not a second copy of the same sign+message) while the actual
+        # empty chart stays hidden.
+        comp_table = _empty_state(hint)
+        return (
+            options, selected, action_text,
+            comp_table,
+            None, {"display": "none"},
+            go.Figure(), {"display": "none"},
         )
-        fig = go.Figure()
-        fig = apply_dark_layout(fig, "Create or select a second scenario to compare")
-        return options, selected, action_text, comp_table, fig
 
     active_s = quick_summary(selected)
 
@@ -196,7 +216,7 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, actio
     ]
     comp_table = dbc.Table.from_dataframe(
         pd.DataFrame(rows),
-        striped=True, bordered=False, hover=True, size="sm", className="text-white mb-0",
+        striped=True, bordered=False, hover=True, size="sm", className="themed-table mb-0",
     )
 
     metrics_list = list(base_s.keys())
@@ -207,4 +227,9 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, actio
                          name=selected, marker_color="#8b5cf6"))
     fig = apply_dark_layout(fig, f"{BASELINE_DISPLAY_NAME} vs {selected}")
 
-    return options, selected, action_text, comp_table, fig
+    return (
+        options, selected, action_text,
+        comp_table,
+        None, {"display": "none"},
+        fig, {"display": "block"},
+    )

@@ -19,38 +19,63 @@ def layout():
     return dbc.Container(
         [
             dbc.Row(id="overview-cards-container", className="mb-4"),
-            dbc.Row(
-                [
-                    dbc.Col(html.Div(dcc.Graph(id="overview-networth-chart"), className="glass-card mb-4"), lg=6),
-                    dbc.Col(html.Div(dcc.Graph(id="overview-business-chart"), className="glass-card mb-4"), lg=6),
-                ]
-            ),
-            dbc.Row(
-                [
-                    dbc.Col(html.Div(dcc.Graph(id="overview-allocation-chart"), className="glass-card mb-4"), lg=6),
-                    dbc.Col(html.Div(id="overview-explain-container", children=render_empty_explain_panel()), lg=6),
-                ]
-            ),
+            html.Div(id="overview-charts-container"),
         ],
         fluid=True,
     )
 
 
+def _render_charts_row(fig_nw, fig_biz, fig_alloc, explain, business_enabled):
+    """Asset Allocation normally shares row 2 with the (business-only) trend chart's
+    row 3 slot; with business hidden there's nothing left to pair it with there, so
+    it moves up to fill the empty spot next to Net Worth instead, and the explain
+    panel takes the full width of what would've been its own row."""
+    graph_card = lambda graph_id, fig: html.Div(dcc.Graph(id=graph_id, figure=fig), className="glass-card mb-4")
+
+    if business_enabled:
+        return [
+            dbc.Row(
+                [
+                    dbc.Col(graph_card("overview-networth-chart", fig_nw), lg=6),
+                    dbc.Col(graph_card("overview-business-chart", fig_biz), lg=6, className="business-only"),
+                ]
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(graph_card("overview-allocation-chart", fig_alloc), lg=6),
+                    dbc.Col(html.Div(id="overview-explain-container", children=explain), lg=6),
+                ]
+            ),
+        ]
+
+    return [
+        dbc.Row(
+            [
+                dbc.Col(graph_card("overview-networth-chart", fig_nw), lg=6),
+                dbc.Col(graph_card("overview-allocation-chart", fig_alloc), lg=6),
+            ]
+        ),
+        dbc.Row(
+            dbc.Col(html.Div(id="overview-explain-container", children=explain), lg=12),
+        ),
+    ]
+
+
 @callback(
     Output("overview-cards-container", "children"),
-    Output("overview-networth-chart", "figure"),
-    Output("overview-business-chart", "figure"),
-    Output("overview-allocation-chart", "figure"),
-    Output("overview-explain-container", "children"),
+    Output("overview-charts-container", "children"),
     Input("project-state-store", "data"),
     Input("explain-target-store", "data"),
+    Input("business-mode-store", "data"),
     prevent_initial_call=False,
 )
-def update_overview(state, explain_target):
+def update_overview(state, explain_target, business_mode_enabled):
     if state is None:
         empty_fig = go.Figure()
         empty_fig = apply_dark_layout(empty_fig, "")
-        return [], empty_fig, empty_fig, empty_fig, render_empty_explain_panel()
+        return [], _render_charts_row(empty_fig, empty_fig, empty_fig, render_empty_explain_panel(), True)
+
+    business_enabled = business_mode_enabled is not False
 
     r = run_all_engines(state)
     fed_tax = r["fed_tax"]
@@ -63,17 +88,29 @@ def update_overview(state, explain_target):
     forecast_df = r["forecast_df"]
 
     personal_tax = fed_tax["value"] + nc_tax["value"]
-    se_corp_tax = fed_tax["se_tax"] + fed_tax["corporate_tax"] + nc_tax["corporate_tax"]
+    # Every other slice of Combined Tax — SE tax, employee/employer FICA, and
+    # corporate tax — so this always reconciles exactly against combined_tax
+    # instead of quietly excluding FICA (personal_tax + other_tax == combined_tax).
+    other_tax = (
+        fed_tax["se_tax"] + fed_tax["payroll_tax"] + fed_tax["employer_payroll_tax"]
+        + fed_tax["corporate_tax"] + nc_tax["corporate_tax"]
+    )
 
     # Four headline numbers instead of six near-duplicate cards: Personal Tax and
-    # SE/Corp Tax are components of Combined Tax, so they ride as its subtitle
-    # rather than getting their own card (still one click away via Combined Tax's
-    # explain panel, which already includes both in its step trace).
+    # "everything else" are components of Combined Tax, so they ride as its
+    # subtitle rather than getting their own card (still one click away via
+    # Combined Tax's explain panel, which has the full step trace). Kept to one
+    # short line — a card this narrow wraps almost anything longer.
+    combined_tax_subtitle = (
+        f"${personal_tax:,.0f} + ${other_tax:,.0f} · {r['effective_rate'] * 100:.1f}%"
+        if business_enabled
+        else f"{r['effective_rate'] * 100:.1f}% effective"
+    )
     cards = [
         render_metric_card(
             "Combined Tax",
             f"${r['combined_tax']:,.0f}",
-            f"Personal ${personal_tax:,.0f} + SE/Corp ${se_corp_tax:,.0f} · {r['effective_rate'] * 100:.1f}% effective",
+            combined_tax_subtitle,
             "purple", "combined_tax",
         ),
         render_metric_card(
@@ -82,19 +119,20 @@ def update_overview(state, explain_target):
             f"Assets: ${nw_result['total_assets']:,.0f}",
             "", "net_worth",
         ),
-        render_metric_card(
+    ]
+    if business_enabled:
+        cards.append(render_metric_card(
             "Business Value",
             f"${val_result['valuations'].get('EBITDA Multiple', 0):,.0f}",
             f"EBITDA × {multiples.get('ebitda', 6.0)}",
             "emerald", "business_value",
-        ),
-        render_metric_card(
-            "Cash Available",
-            f"${float(recent_q['Cash']):,.0f}",
-            f"End of {recent_q['Quarter']}",
-            "", "cash_available",
-        ),
-    ]
+        ))
+    cards.append(render_metric_card(
+        "Cash Available",
+        f"${float(recent_q['Cash']):,.0f}",
+        f"End of {recent_q['Quarter']}",
+        "", "cash_available",
+    ))
 
     fig_nw = create_net_worth_trend(nw_proj_df)
     fig_biz = create_business_trend(forecast_df)
@@ -120,15 +158,20 @@ def update_overview(state, explain_target):
             nw_result["trace"]["rules_referenced"],
             nw_result["trace"]["steps"],
         ),
-        "business_value": render_explain_panel(
+    }
+    if business_enabled:
+        panels["business_value"] = render_explain_panel(
             "Business Valuation (EBITDA Multiple)",
             val_result["trace"]["formula"],
             val_result["trace"]["inputs"],
             val_result["trace"]["assumptions_used"],
             val_result["trace"]["rules_referenced"],
             val_result["trace"]["steps"],
-        ),
-    }
+        )
+    # If a business panel was selected before Business Mode got turned off,
+    # fall back instead of rendering a target that's no longer in the dict.
+    if target not in panels:
+        target = "combined_tax"
     explain = panels.get(target, render_empty_explain_panel())
 
-    return cards, fig_nw, fig_biz, fig_alloc, explain
+    return cards, _render_charts_row(fig_nw, fig_biz, fig_alloc, explain, business_enabled)
