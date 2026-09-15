@@ -1,0 +1,9 @@
+{
+    "tax_year": 2021,
+    "standard_deduction": {
+        "single": 10750.0,
+        "married": 21500.0
+    },
+    "flat_rate": 0.0525,
+    "corporate_rate": 0.025
+}
