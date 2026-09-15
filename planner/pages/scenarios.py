@@ -84,11 +84,11 @@ def layout():
                                         ),
                                         dbc.Button(
                                             [html.I(className="bi bi-copy me-1"), "Duplicate Active"],
-                                            id="scenarios-duplicate-btn", color="secondary", className="me-2 mb-2",
+                                            id="scenarios-duplicate-btn", color="secondary", outline=True, className="me-2 mb-2",
                                         ),
                                         dbc.Button(
                                             [html.I(className="bi bi-pencil me-1"), "Rename Active"],
-                                            id="scenarios-rename-btn", color="secondary", className="me-2 mb-2",
+                                            id="scenarios-rename-btn", color="secondary", outline=True, className="me-2 mb-2",
                                         ),
                                         dbc.Button(
                                             [html.I(className="bi bi-trash3 me-1"), "Delete Active"],
@@ -96,6 +96,26 @@ def layout():
                                         ),
                                     ],
                                     className="d-flex flex-wrap gap-1",
+                                ),
+                                html.Div(
+                                    [
+                                        html.Span(
+                                            "Delete this scenario? This can't be undone.",
+                                            className="text-danger me-2",
+                                            style={"fontSize": "0.85rem", "fontWeight": 600},
+                                        ),
+                                        dbc.Button(
+                                            "Yes, delete it", id="scenarios-delete-confirm-btn",
+                                            color="danger", size="sm", className="me-2",
+                                        ),
+                                        dbc.Button(
+                                            "Cancel", id="scenarios-delete-cancel-btn",
+                                            color="secondary", outline=True, size="sm",
+                                        ),
+                                    ],
+                                    id="scenarios-delete-confirm-row",
+                                    className="mt-1 mb-2",
+                                    style={"display": "none"},
                                 ),
                             ],
                             className="glass-card mb-4",
@@ -134,20 +154,35 @@ def layout():
     Output("scenarios-comparison-chart-empty",    "style"),
     Output("scenarios-comparison-chart",          "figure"),
     Output("scenarios-comparison-chart",          "style"),
+    Output("scenarios-delete-confirm-row",        "style"),
     Input("scenarios-create-btn",    "n_clicks"),
     Input("scenarios-duplicate-btn", "n_clicks"),
     Input("scenarios-rename-btn",    "n_clicks"),
-    Input("scenarios-delete-btn",    "n_clicks"),
+    Input("scenarios-delete-btn",         "n_clicks"),
+    Input("scenarios-delete-confirm-btn", "n_clicks"),
+    Input("scenarios-delete-cancel-btn",  "n_clicks"),
     Input("scenarios-list-dropdown", "value"),
     Input("business-mode-store",     "data"),
     State("scenarios-action-input",  "value"),
     prevent_initial_call=False,
 )
-def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, business_mode_enabled, action_text):
+def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, delete_confirm_c, delete_cancel_c, selected, business_mode_enabled, action_text):
     business_enabled = business_mode_enabled is not False
     ctx = callback_context
     triggered = ctx.triggered[0]["prop_id"] if ctx.triggered else ""
     action_text = action_text or ""
+
+    # "Delete Active" never deletes on its own click — it only arms an inline
+    # "Are you sure?" row (native confirm()/alert() dialogs get silently
+    # suppressed by Chrome after a couple of uses, so this has to be a real
+    # in-page element, not a JS dialog). Only the confirm row's own "Yes,
+    # delete it" button actually calls delete_scenario.
+    confirm_style = {"display": "none"}
+    if "scenarios-delete-btn." in triggered and selected and selected != "Baseline":
+        confirm_style = {"display": "block"}
+    elif "delete-confirm-btn" in triggered and selected and selected != "Baseline":
+        delete_scenario(selected)
+        selected, action_text = "Baseline", ""
 
     if "create-btn" in triggered and action_text:
         save_scenario(action_text, {"name": action_text, "changes": {}})
@@ -159,9 +194,6 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, busin
         duplicate_scenario(selected, action_text)
         delete_scenario(selected)
         selected, action_text = action_text, ""
-    elif "delete-btn" in triggered and selected and selected != "Baseline":
-        delete_scenario(selected)
-        selected, action_text = "Baseline", ""
 
     sc_list = get_scenarios_list()
     selected = selected if selected in sc_list else "Baseline"
@@ -175,12 +207,14 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, busin
             "Annual Tax":       rr["combined_tax"],
             "Annual EBITDA":    rr["ebitda_q"] * 4.0,
             "Cash Available":   float(recent["Cash"]),
-            "Business Value":   rr["val_result"]["valuations"]["EBITDA Multiple"],
+            "Business Value":   rr["val_result"]["value"],
             "Net Worth":        rr["nw_result"]["value"],
+            "Combined Net Worth": rr["combined_net_worth"],
         }
         if not business_enabled:
             summary.pop("Annual EBITDA", None)
             summary.pop("Business Value", None)
+            summary.pop("Combined Net Worth", None)
         return summary
 
     base_s = quick_summary("Baseline")
@@ -201,6 +235,7 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, busin
             comp_table,
             None, {"display": "none"},
             go.Figure(), {"display": "none"},
+            confirm_style,
         )
 
     active_s = quick_summary(selected)
@@ -232,4 +267,5 @@ def handle_scenario_actions(create_c, dup_c, rename_c, delete_c, selected, busin
         comp_table,
         None, {"display": "none"},
         fig, {"display": "block"},
+        confirm_style,
     )

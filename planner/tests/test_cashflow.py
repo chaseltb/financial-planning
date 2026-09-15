@@ -24,12 +24,14 @@ def test_combined_cashflow():
 
     # Inflows: W-2 (80,000) + Interest (500) = 80,500
     assert res["total_inflows"] == 80500.0
-    # Outflows: Housing (24,000) + Food (6,000) + non-mortgage debt (400*12=4,800)
-    #   + retirement (5,000) + taxes (15,000) = 54,800
-    # Mortgage payment is excluded from debt service since Housing expenses are already present.
-    assert res["total_outflows"] == 54800.0
-    assert res["value"] == 25700.0
-    assert res["breakdown"]["outflows"]["Debt Service"] == 4800.0
+    # Outflows: Housing (24,000) + Food (6,000) + all debt service (400+1500)*12=22,800
+    #   + retirement (5,000) + taxes (15,000) = 72,800
+    # A liability's monthly_payment is always counted: it's the single authoritative
+    # source for that debt's payment, regardless of what's logged under "Housing"
+    # (rent, property tax, insurance, HOA — never the mortgage payment itself).
+    assert res["total_outflows"] == 72800.0
+    assert res["value"] == 7700.0
+    assert res["breakdown"]["outflows"]["Debt Service"] == 22800.0
 
 
 def test_combined_cashflow_negative():
@@ -50,6 +52,20 @@ def test_combined_cashflow_no_housing_includes_mortgage():
 
     assert res["breakdown"]["outflows"]["Debt Service"] == 12000.0
     assert res["value"] == 48000.0
+
+
+def test_combined_cashflow_mortgage_and_other_housing_costs_both_count():
+    # A homeowner logging property tax/insurance/HOA under "Housing" (never the
+    # mortgage payment itself, which lives on the Liabilities ledger) must still
+    # have the mortgage's own monthly_payment counted as debt service.
+    personal_income = [{"category": "W-2", "amount": 100000.0}]
+    personal_expenses = [{"category": "Housing", "amount": 6000.0}]  # property tax/insurance/HOA
+    liabilities = [{"category": "Mortgage", "monthly_payment": 2000.0}]
+
+    res = calculate_combined_cashflow(personal_income, personal_expenses, liabilities, {}, {"combined_tax": 0.0})
+
+    assert res["breakdown"]["outflows"]["Debt Service"] == 24000.0
+    assert res["total_outflows"] == 30000.0
 
 
 def test_combined_cashflow_empty_inputs():

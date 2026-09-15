@@ -9,6 +9,7 @@ from planner.components.charts import create_business_trend
 from planner.components.business_gate import render_business_gate, register_business_gate
 from planner.engines.runner import run_all_engines
 from planner.engines.forecast import DEFAULT_SEED
+from planner.engines.valuation import get_ownership_fraction
 from planner.data_manager import save_or_mark_unsaved
 
 dash.register_page(__name__, path="/business", title="Business Planning")
@@ -329,7 +330,7 @@ def populate_business_page(state):
     r = run_all_engines(state)
     b = state.get("business", {})
     entity_type = b.get("entity_type", "Sole Proprietorship")
-    ownership_pct = max(0.0, min(1.0, float(b.get("ownership_pct", 100.0)) / 100.0))
+    ownership_pct = get_ownership_fraction(b)
     annual_ebitda = r["ebitda_q"] * 4.0
     annual_ni = r["annual_net_biz_income"]
     margin = (r["ebitda_q"] / r["revenue_q"] * 100) if r["revenue_q"] > 0 else 0.0

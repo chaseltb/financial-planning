@@ -7,3 +7,4 @@ class BusinessProfile(BaseModel):
     expense_growth: float = 0.03  # Quarterly expense growth expectation
     owner_salary: float = 50000.0  # Annual salary paid to owner (W-2, especially S-Corp / C-Corp)
     distributions: float = 20000.0  # Annual distributions paid to owner (S-Corp / Partnerships)
+    ownership_pct: float = 100.0  # Owner's stake in the business, 0-100

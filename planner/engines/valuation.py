@@ -1,5 +1,14 @@
 from typing import Dict, Any, List
 
+def get_ownership_fraction(business_profile: Dict[str, Any]) -> float:
+    """Single source of truth for the owner's ownership share, as a 0-1 fraction.
+
+    ownership_pct is stored as a 0-100 percentage; clamped to [0, 100] here so
+    every caller (tax, valuation, net worth) agrees on the same value.
+    """
+    return max(0.0, min(1.0, float(business_profile.get("ownership_pct", 100.0)) / 100.0))
+
+
 def calculate_valuation(
     metrics: Dict[str, float],
     multiples: Dict[str, float],
@@ -25,10 +34,12 @@ def calculate_valuation(
     mult_sde = multiples.get("sde", 4.5)
     mult_fcf = multiples.get("fcf", 7.0)
     
-    # Calculations
-    val_rev = revenue * mult_rev
-    val_ebitda = ebitda * mult_ebitda
-    val_ni = net_income * mult_ni
+    # Calculations. A business's income-multiple value floors at $0 — a loss-making
+    # quarter makes it worth nothing by this method, not a negative asset that would
+    # otherwise subtract from the owner's net worth.
+    val_rev = max(0.0, revenue * mult_rev)
+    val_ebitda = max(0.0, ebitda * mult_ebitda)
+    val_ni = max(0.0, net_income * mult_ni)
     val_sde = sde * mult_sde
     val_fcf = fcf * mult_fcf
     

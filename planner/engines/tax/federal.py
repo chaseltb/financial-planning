@@ -34,21 +34,24 @@ def calculate_bracket_tax(taxable_ordinary: float, brackets: List[Dict[str, floa
     return tax, steps
 
 
-def calculate_cap_gains_tax(cap_gains_and_div: float, ordinary_taxable: float, filing_status: str) -> tuple[float, List[str]]:
+def calculate_cap_gains_tax(cap_gains_and_div: float, ordinary_taxable: float, filing_status: str, rules: Dict[str, Any] = None) -> tuple[float, List[str]]:
     """
-    Calculates capital gains tax based on 2026 capital gains brackets:
-    0% rate up to $47,000 (Single) / $94,000 (MFJ)
-    15% rate up to $518,000 (Single) / $583,000 (MFJ)
-    20% rate above that.
+    Calculates capital gains tax using the long-term capital gains brackets for
+    the selected tax year (0% / 15% / 20%), which differ by year — pulled from
+    the same tax_rules JSON as everything else instead of one hardcoded set
+    silently reused regardless of which tax year is selected.
     """
     if cap_gains_and_div <= 0:
         return 0.0, ["No capital gains or qualified dividends to tax."]
-        
-    thresholds_0 = {"single": 47000.0, "married": 94000.0}
-    thresholds_15 = {"single": 518000.0, "married": 583000.0}
-    
-    th_0 = thresholds_0.get(filing_status.lower(), 47000.0)
-    th_15 = thresholds_15.get(filing_status.lower(), 518000.0)
+
+    rules = rules or {}
+    default_brackets = {"single": {"0pct_top": 47025.0, "15pct_top": 518900.0},
+                         "married": {"0pct_top": 94050.0, "15pct_top": 583750.0}}
+    cg_brackets = rules.get("capital_gains_brackets", default_brackets)
+    fs_brackets = cg_brackets.get(filing_status.lower(), default_brackets["single"])
+
+    th_0 = fs_brackets.get("0pct_top", 47025.0)
+    th_15 = fs_brackets.get("15pct_top", 518900.0)
     
     # Capital gains tax is stacked on top of ordinary income
     tax = 0.0
@@ -141,21 +144,39 @@ def calculate_federal_tax(
             f"= ${owner_share_net_income:,.2f} allocated to this taxpayer."
         )
 
+    # The annual Social Security wage base and Additional Medicare Tax threshold
+    # apply ONCE per taxpayer across every wage/SE income source combined, not
+    # once per source — track how much each has already been "used" by earlier
+    # income as each source is processed, in the order: W-2 wages, then business
+    # flow-through SE income, then personal 1099 SE income.
+    ss_wage_base_used = w2_personal
+    medicare_earnings_used = w2_personal
+
     if entity in ["Sole Proprietorship", "Single-member LLC"]:
         # All net profit flows to personal Schedule C, subject to SE tax
-        se_calc = calculate_self_employment_tax(owner_share_net_income, filing_status, rules)
+        se_calc = calculate_self_employment_tax(
+            owner_share_net_income, filing_status, rules,
+            ss_wage_base_used=ss_wage_base_used, medicare_earnings_used=medicare_earnings_used,
+        )
         se_tax = se_calc["value"]
         se_deduction = se_calc["deductible_amount"]
         qbi_qualified_income = owner_share_net_income
+        ss_wage_base_used += se_calc["se_earnings"]
+        medicare_earnings_used += se_calc["se_earnings"]
         business_steps.append(f"Sole Proprietorship/LLC flow-through: Net Profit ${owner_share_net_income:,.2f} is added to ordinary income.")
         business_steps.append(f"Self-Employment Tax computed: ${se_tax:,.2f} (Deductible portion: ${se_deduction:,.2f})")
 
     elif entity == "Multi-member LLC":
         # Multi-member LLC is treated as partnership. Net profit flows to personal K-1, subject to SE tax
-        se_calc = calculate_self_employment_tax(owner_share_net_income, filing_status, rules)
+        se_calc = calculate_self_employment_tax(
+            owner_share_net_income, filing_status, rules,
+            ss_wage_base_used=ss_wage_base_used, medicare_earnings_used=medicare_earnings_used,
+        )
         se_tax = se_calc["value"]
         se_deduction = se_calc["deductible_amount"]
         qbi_qualified_income = owner_share_net_income
+        ss_wage_base_used += se_calc["se_earnings"]
+        medicare_earnings_used += se_calc["se_earnings"]
         business_steps.append(f"Partnership (Multi-member LLC) flow-through: This partner's Net Profit share ${owner_share_net_income:,.2f} flows to K-1.")
         business_steps.append(f"Self-Employment Tax computed: ${se_tax:,.2f} (Deductible portion: ${se_deduction:,.2f})")
 
@@ -176,9 +197,15 @@ def calculate_federal_tax(
     personal_1099_se_tax = 0.0
     personal_1099_se_deduction = 0.0
     if consulting_1099 > 0:
-        se_calc_1099 = calculate_self_employment_tax(consulting_1099, filing_status, rules)
+        se_calc_1099 = calculate_self_employment_tax(
+            consulting_1099, filing_status, rules,
+            ss_wage_base_used=ss_wage_base_used, medicare_earnings_used=medicare_earnings_used,
+        )
         personal_1099_se_tax = se_calc_1099["value"]
         personal_1099_se_deduction = se_calc_1099["deductible_amount"]
+        # 1099 consulting profit is QBI-eligible self-employment income too — not
+        # just K-1/Schedule-C profit routed through the "business" module.
+        qbi_qualified_income += consulting_1099
         business_steps.append(f"Personal 1099 consulting SE Tax: ${personal_1099_se_tax:,.2f} (Deductible: ${personal_1099_se_deduction:,.2f})")
         
     total_se_tax = se_tax + personal_1099_se_tax
@@ -237,7 +264,7 @@ def calculate_federal_tax(
     # 9. Calculate Taxes
     brackets = rules.get("brackets", {}).get(filing_status.lower(), [])
     ordinary_tax, ordinary_tax_steps = calculate_bracket_tax(taxable_ordinary, brackets)
-    cap_gains_tax, cap_gains_tax_steps = calculate_cap_gains_tax(taxable_cap_gains, taxable_ordinary, filing_status)
+    cap_gains_tax, cap_gains_tax_steps = calculate_cap_gains_tax(taxable_cap_gains, taxable_ordinary, filing_status, rules)
     
     total_personal_income_tax = ordinary_tax + cap_gains_tax
 
@@ -311,6 +338,8 @@ def calculate_federal_tax(
         "employer_payroll_tax": employer_payroll_tax,
         "agi": agi,
         "taxable_income": taxable_income,
+        "taxable_ordinary": taxable_ordinary,
+        "taxable_cap_gains": taxable_cap_gains,
         "ordinary_tax": ordinary_tax,
         "cap_gains_tax": cap_gains_tax,
         "qbi_deduction": qbi_deduction,

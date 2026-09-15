@@ -43,7 +43,6 @@ html[data-business-mode="false"] .business-only {
     --active-nav-bg: #e2e8f0;
 }
 
-:root[data-theme="light"] .glass-card,
 :root[data-theme="light"] .sidebar-container {
     box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08);
 }
@@ -81,8 +80,14 @@ h1, h2, h3, h4, h5, h6 {
     border: 1px solid var(--border-glass);
     border-radius: 16px;
     padding: 24px;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Bootstrap's .row/.col flexbox already stretches sibling columns in a row
+       to equal height; this makes the card itself fill that stretched column
+       instead of just sizing to its own content, so a row of cards lines up
+       evenly even when one has more text/value length than the others. A
+       no-op everywhere else, since a column with only auto-height content has
+       nothing taller to stretch to. */
+    height: 100%;
     /* backdrop-filter creates a new stacking context, so a dropdown's open menu
        (rendered as a normal descendant, not portalled to <body>) can never paint
        above a LATER card in the page — that later card's own backdrop-filter
@@ -95,38 +100,16 @@ h1, h2, h3, h4, h5, h6 {
 
 .glass-card:hover {
     border-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
-    transform: translateY(-2px);
 }
 
 .glass-card:focus-within {
     z-index: 50;
 }
 
-/* Metric Cards */
-.metric-card {
-    border-left: 4px solid var(--accent-blue);
-}
-.metric-card.emerald {
-    border-left-color: var(--accent-emerald);
-}
-.metric-card.purple {
-    border-left-color: var(--accent-purple);
-}
-/* .glass-card:hover sets border-color (all sides) with higher specificity than
-   the plain .metric-card's border-left, so hovering wiped the blue band back to
-   the generic glass border — the emerald/purple variants only survived because
-   their two-class selector happens to tie in specificity and land later in the
-   cascade. Pin border-left-color explicitly on hover so all four metric cards
-   behave the same regardless of color variant. */
-.metric-card:hover {
-    border-left-color: var(--accent-blue);
-}
-.metric-card.emerald:hover {
-    border-left-color: var(--accent-emerald);
-}
-.metric-card.purple:hover {
-    border-left-color: var(--accent-purple);
+/* Metric Cards — flat, no color-coded left stripe; the primary metric (see
+   .metric-card-primary) carries visual weight through size instead. */
+.metric-card-primary {
+    background: var(--bg-glass);
 }
 
 .metric-title {
@@ -141,6 +124,14 @@ h1, h2, h3, h4, h5, h6 {
 .metric-value {
     font-family: var(--font-heading);
     font-size: 1.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.metric-value-lg {
+    font-family: var(--font-heading);
+    font-size: 3rem;
     font-weight: 700;
     color: var(--text-primary);
     line-height: 1;
@@ -351,12 +342,14 @@ h1, h2, h3, h4, h5, h6 {
     background-color: transparent !important;
     color: var(--text-secondary) !important;
     border-bottom: 1px solid var(--border-glass) !important;
+    padding: 8px 10px !important;
 }
 
 .themed-table > tbody > tr > td {
     background-color: transparent !important;
     color: var(--text-primary) !important;
     border-color: var(--border-glass) !important;
+    padding: 6px 10px !important;
 }
 
 .themed-table.table-striped > tbody > tr:nth-of-type(odd) > td {
@@ -364,6 +357,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .themed-table.table-hover > tbody > tr:hover > td {
+    background-color: var(--bg-secondary) !important;
+}
+
+/* Click-to-edit record rows (record_table.py): the whole row opens the shared
+   edit/delete modal, so it needs to read as clickable — cursor + hover
+   highlight — the way an icon-button would, without adding icon clutter. */
+.record-table > tbody > tr.record-row {
+    cursor: pointer;
+}
+
+.record-table > tbody > tr.record-row:hover > td {
     background-color: var(--bg-secondary) !important;
 }
 
@@ -650,6 +654,41 @@ input.form-control, select.form-select {
 .chip-subtitle {
     font-size: 0.75rem;
     color: var(--text-secondary);
+}
+
+/* Tailored tax strategy tips (Taxes page) */
+.tax-tips-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+}
+
+.tax-tip-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.tax-tip-category {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.tax-tip-title {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 2px 0 8px;
+}
+
+.tax-tip-body {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
 }
 
 .bracket-legend-item span {

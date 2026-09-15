@@ -37,6 +37,24 @@ def test_valuation():
     assert res["valuations"]["FCF Multiple"] == 420000.0
 
 
+def test_valuation_floors_negative_ebitda_and_net_income_at_zero():
+    # A loss-making quarter must never produce a negative business value — an
+    # income-multiple valuation is worth $0 in a loss, not a negative asset that
+    # would otherwise subtract from the owner's net worth.
+    metrics = {
+        "revenue": 200000.0,
+        "ebitda": -50000.0,
+        "net_income": -50000.0,
+        "owner_salary": 0.0,
+        "capex": 0.0,
+        "taxes": 0.0,
+    }
+    res = calculate_valuation(metrics, {"ebitda": 6.0, "net_income": 8.0})
+    assert res["valuations"]["EBITDA Multiple"] == 0.0
+    assert res["valuations"]["Net Income Multiple"] == 0.0
+    assert res["value"] == 0.0
+
+
 def test_sensitivity():
     metrics = {
         "revenue": 500000.0,

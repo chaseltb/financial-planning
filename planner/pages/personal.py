@@ -1,12 +1,11 @@
-"""Personal Finances page — editable income/expense/asset/liability tables."""
+"""Personal Finances page — click-to-edit income/expense/asset/liability record lists."""
 import copy
 
 import dash
 from dash import html, dcc, callback, callback_context, Input, Output, State, ALL, no_update
 import dash_bootstrap_components as dbc
-import pandas as pd
 
-from planner.components.editable_table import render_editable_table
+from planner.components.record_table import render_record_table, render_record_modal, render_field_input
 from planner.components.citations import render_citation_panel
 from planner.components.charts import create_allocation_chart
 from planner.data_manager import save_or_mark_unsaved
@@ -17,34 +16,77 @@ _DEFAULT_BUDGET_ALLOCATION = {"Savings": 34.0, "Liability Paydown": 33.0, "Taxab
 
 dash.register_page(__name__, path="/personal", title="Personal Finances")
 
+# Read-only display columns for each record table (see components/record_table.py).
 _INCOME_COLS = [
-    {"name": "Category",       "id": "category"},
-    {"name": "Description",    "id": "description"},
-    {"name": "Amount ($/yr)",  "id": "amount", "type": "numeric"},
+    {"id": "category",    "name": "Category",      "type": "text"},
+    {"id": "description", "name": "Description",   "type": "text"},
+    {"id": "amount",      "name": "Amount ($/yr)", "type": "money"},
 ]
-_EXPENSE_COLS = [
-    {"name": "Category",       "id": "category"},
-    {"name": "Description",    "id": "description"},
-    {"name": "Amount ($/yr)",  "id": "amount", "type": "numeric"},
-]
+_EXPENSE_COLS = _INCOME_COLS
 _ASSET_COLS = [
-    {"name": "Category",           "id": "category"},
-    {"name": "Description",        "id": "description"},
-    {"name": "Value ($)",          "id": "value",       "type": "numeric"},
-    {"name": "Annual Growth Rate", "id": "growth_rate", "type": "numeric"},
+    {"id": "category",    "name": "Category",           "type": "text"},
+    {"id": "description", "name": "Description",        "type": "text"},
+    {"id": "value",       "name": "Value ($)",          "type": "money"},
+    {"id": "growth_rate", "name": "Annual Growth Rate", "type": "percent"},
 ]
 _LIAB_COLS = [
-    {"name": "Category",               "id": "category"},
-    {"name": "Description",            "id": "description"},
-    {"name": "Outstanding Balance ($)", "id": "value",           "type": "numeric"},
-    {"name": "Interest Rate (APR)",    "id": "interest_rate",   "type": "numeric"},
-    {"name": "Monthly Payment ($)",    "id": "monthly_payment", "type": "numeric"},
+    {"id": "category",        "name": "Category",                "type": "text"},
+    {"id": "description",     "name": "Description",             "type": "text"},
+    {"id": "value",           "name": "Outstanding Balance ($)", "type": "money"},
+    {"id": "interest_rate",   "name": "Interest Rate (APR)",     "type": "percent"},
+    {"id": "monthly_payment", "name": "Monthly Payment ($)",     "type": "money"},
 ]
+
+# Field definitions that drive the shared edit/add modal's form for each table —
+# label, input type, and whether the value is stored as a fraction but shown as
+# a whole percentage point (matching how percent fields work everywhere else).
+_TABLE_FIELD_DEFS = {
+    "income": [
+        {"field": "category", "label": "Category", "type": "text"},
+        {"field": "description", "label": "Description", "type": "text"},
+        {"field": "amount", "label": "Amount ($/yr)", "type": "number"},
+    ],
+    "expenses": [
+        {"field": "category", "label": "Category", "type": "text"},
+        {"field": "description", "label": "Description", "type": "text"},
+        {"field": "amount", "label": "Amount ($/yr)", "type": "number"},
+    ],
+    "assets": [
+        {"field": "category", "label": "Category", "type": "text"},
+        {"field": "description", "label": "Description", "type": "text"},
+        {"field": "value", "label": "Value ($)", "type": "number"},
+        {"field": "growth_rate", "label": "Annual Growth Rate (%)", "type": "number", "percent": True},
+    ],
+    "liabilities": [
+        {"field": "category", "label": "Category", "type": "text"},
+        {"field": "description", "label": "Description", "type": "text"},
+        {"field": "value", "label": "Outstanding Balance ($)", "type": "number"},
+        {"field": "interest_rate", "label": "Interest Rate / APR (%)", "type": "number", "percent": True},
+        {"field": "monthly_payment", "label": "Monthly Payment ($)", "type": "number"},
+    ],
+}
+_TABLE_DEFAULTS = {
+    "income": {"category": "Other", "description": "New Income Source", "amount": 0.0},
+    "expenses": {"category": "Other", "description": "New Expense", "amount": 0.0},
+    "assets": {"category": "Investment", "description": "New Asset", "value": 0.0, "growth_rate": 0.05},
+    "liabilities": {"category": "Debt", "description": "New Liability",
+                     "value": 0.0, "interest_rate": 0.05, "monthly_payment": 0.0},
+}
+_TABLE_TITLES = {"income": "Income Entry", "expenses": "Expense Entry", "assets": "Asset", "liabilities": "Liability"}
+_ADD_BTN_TO_TABLE = {
+    "income-table-add-btn": "income",
+    "expenses-table-add-btn": "expenses",
+    "assets-table-add-btn": "assets",
+    "liabilities-table-add-btn": "liabilities",
+}
 
 
 def layout():
     return dbc.Container(
         [
+            dcc.Store(id="record-modal-store"),
+            dcc.Store(id="record-table-pages", data={}),
+            render_record_modal("record-edit-modal"),
             render_citation_panel(),
             dbc.Row(
                 [
@@ -79,7 +121,7 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "profile-input", "field": "retirement_401k"},
-                                            type="number", debounce=True, min=0, max=100000, step=1, value=0
+                                            type="number", debounce=True, min=-100000, max=100000, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
@@ -101,7 +143,7 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "profile-input", "field": "retirement_ira"},
-                                            type="number", debounce=True, min=0, max=50000, step=1, value=0
+                                            type="number", debounce=True, min=-50000, max=50000, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
@@ -123,7 +165,7 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "profile-input", "field": "retirement_hsa"},
-                                            type="number", debounce=True, min=0, max=20000, step=1, value=0
+                                            type="number", debounce=True, min=-20000, max=20000, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
@@ -140,7 +182,7 @@ def layout():
                                         dbc.InputGroupText("$"),
                                         dbc.Input(
                                             id={"type": "profile-input", "field": "solo_401k"},
-                                            type="number", debounce=True, min=0, max=150000, step=1, value=0
+                                            type="number", debounce=True, min=-150000, max=150000, step=1, value=0
                                         ),
                                         dbc.InputGroupText("/yr"),
                                     ],
@@ -156,9 +198,19 @@ def layout():
                         [
                             html.Div(
                                 [
-                                    html.H4(
-                                        [html.I(className="bi bi-wallet2 me-2 text-primary"), "Income Streams (Annual)"],
-                                        className="mb-3"
+                                    html.Div(
+                                        [
+                                            html.H4(
+                                                [html.I(className="bi bi-wallet2 me-2 text-primary"), "Income Streams (Annual)"],
+                                                className="mb-0"
+                                            ),
+                                            dbc.Button(
+                                                [html.I(className="bi bi-plus-circle me-1"), "Add Row"],
+                                                id="income-table-add-btn", n_clicks=0,
+                                                color="primary", size="sm",
+                                            ),
+                                        ],
+                                        className="d-flex justify-content-between align-items-center mb-3",
                                     ),
                                     html.Div(id="personal-income-table-container")
                                 ],
@@ -166,9 +218,19 @@ def layout():
                             ),
                             html.Div(
                                 [
-                                    html.H4(
-                                        [html.I(className="bi bi-cart4 me-2 text-danger"), "Living Expenses (Annual)"],
-                                        className="mb-3"
+                                    html.Div(
+                                        [
+                                            html.H4(
+                                                [html.I(className="bi bi-cart4 me-2 text-danger"), "Living Expenses (Annual)"],
+                                                className="mb-0"
+                                            ),
+                                            dbc.Button(
+                                                [html.I(className="bi bi-plus-circle me-1"), "Add Row"],
+                                                id="expenses-table-add-btn", n_clicks=0,
+                                                color="primary", size="sm",
+                                            ),
+                                        ],
+                                        className="d-flex justify-content-between align-items-center mb-3",
                                     ),
                                     html.Div(id="personal-expenses-table-container")
                                 ],
@@ -184,9 +246,19 @@ def layout():
                     dbc.Col(
                         html.Div(
                             [
-                                html.H4(
-                                    [html.I(className="bi bi-gem me-2 text-success"), "Assets"],
-                                    className="mb-3"
+                                html.Div(
+                                    [
+                                        html.H4(
+                                            [html.I(className="bi bi-gem me-2 text-success"), "Assets"],
+                                            className="mb-0"
+                                        ),
+                                        dbc.Button(
+                                            [html.I(className="bi bi-plus-circle me-1"), "Add Row"],
+                                            id="assets-table-add-btn", n_clicks=0,
+                                            color="primary", size="sm",
+                                        ),
+                                    ],
+                                    className="d-flex justify-content-between align-items-center mb-3",
                                 ),
                                 html.Div(id="personal-assets-table-container")
                             ],
@@ -197,9 +269,19 @@ def layout():
                     dbc.Col(
                         html.Div(
                             [
-                                html.H4(
-                                    [html.I(className="bi bi-credit-card-2-front me-2 text-warning"), "Liabilities"],
-                                    className="mb-3"
+                                html.Div(
+                                    [
+                                        html.H4(
+                                            [html.I(className="bi bi-credit-card-2-front me-2 text-warning"), "Liabilities"],
+                                            className="mb-0"
+                                        ),
+                                        dbc.Button(
+                                            [html.I(className="bi bi-plus-circle me-1"), "Add Row"],
+                                            id="liabilities-table-add-btn", n_clicks=0,
+                                            color="primary", size="sm",
+                                        ),
+                                    ],
+                                    className="d-flex justify-content-between align-items-center mb-3",
                                 ),
                                 html.Div(id="personal-liabilities-table-container")
                             ],
@@ -297,19 +379,21 @@ def toggle_citations_panel(n_clicks, is_open):
     Output({"type": "budget-alloc-input", "field": "Liability Paydown"},  "value"),
     Output({"type": "budget-alloc-input", "field": "Taxable Brokerage"},  "value"),
     Input("project-state-store", "data"),
+    Input("record-table-pages", "data"),
     prevent_initial_call=False,
 )
-def populate_personal_page(state):
+def populate_personal_page(state, pages):
     if state is None:
         return [no_update] * 12
 
+    pages = pages or {}
     p = state.get("profile", {})
     allocation_pct = p.get("budget_allocation", _DEFAULT_BUDGET_ALLOCATION)
     return (
-        render_editable_table("income-table",      pd.DataFrame(state.get("income",       [])), _INCOME_COLS,  empty_label="income streams"),
-        render_editable_table("expenses-table",    pd.DataFrame(state.get("expenses",     [])), _EXPENSE_COLS, empty_label="living expenses"),
-        render_editable_table("assets-table",      pd.DataFrame(state.get("assets",       [])), _ASSET_COLS,   empty_label="assets"),
-        render_editable_table("liabilities-table", pd.DataFrame(state.get("liabilities",  [])), _LIAB_COLS,    empty_label="liabilities"),
+        render_record_table("income",      state.get("income",      []), _INCOME_COLS,  page=pages.get("income", 0),      empty_label="income streams"),
+        render_record_table("expenses",    state.get("expenses",    []), _EXPENSE_COLS, page=pages.get("expenses", 0),    empty_label="living expenses"),
+        render_record_table("assets",      state.get("assets",      []), _ASSET_COLS,   page=pages.get("assets", 0),      empty_label="assets"),
+        render_record_table("liabilities", state.get("liabilities", []), _LIAB_COLS,    page=pages.get("liabilities", 0), empty_label="liabilities"),
         p.get("filing_status",  "single"),
         p.get("retirement_401k", 0),
         p.get("retirement_ira",  0),
@@ -407,10 +491,12 @@ def persist_profile_and_allocation_edits(
         for pid, val in zip(profile_ids, profile_vals):
             if val is not None:
                 field = pid["field"]
-                # Input validation: coerce numeric fields to be >= 0
+                # Negative values are allowed here on purpose: a negative contribution
+                # models a withdrawal from that account (e.g. cashing out a 401k),
+                # which should show up as taxable income rather than being clamped away.
                 if field in ["retirement_401k", "retirement_ira", "retirement_hsa", "solo_401k"]:
                     try:
-                        val = max(0.0, float(val or 0.0))
+                        val = float(val or 0.0)
                     except ValueError:
                         val = 0.0
                 new_state["profile"][field] = val
@@ -430,158 +516,204 @@ def persist_profile_and_allocation_edits(
     return new_state, label
 
 
-def _persist_table(table_key, table_data, current_state, active_scenario, autosave_enabled, percent_fields=()):
-    # table_data is None when the table is in empty-state mode (no DataTable rendered).
-    # In that case, data is already empty — only persist if we have actual data.
-    if current_state is None or table_data is None:
-        return no_update, no_update
-    new_state = copy.deepcopy(current_state)
-    rows = [dict(r) for r in table_data if r]
-    # The table displays/edits these as whole percentage points (7 = 7%) to match
-    # what a user actually types; state stores them as fractions (0.07) since every
-    # engine (tax, forecast, net worth projection) expects a fraction.
-    for row in rows:
-        for field in percent_fields:
-            if field in row and row[field] not in (None, ""):
-                try:
-                    row[field] = float(row[field]) / 100.0
-                except (TypeError, ValueError):
-                    pass
-    new_state[table_key] = rows
-    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
-    return new_state, label
-
-
 @callback(
-    Output("project-state-store", "data", allow_duplicate=True),
-    Output("save-status-indicator", "children", allow_duplicate=True),
-    Input("income-table", "data"),
-    State("project-state-store", "data"),
-    State("active-scenario-store", "data"),
-    State("autosave-enabled-store", "data"),
+    Output("record-table-pages", "data"),
+    Input({"type": "record-page-nav", "table": ALL, "dir": ALL}, "n_clicks"),
+    State("record-table-pages", "data"),
     prevent_initial_call=True,
 )
-def persist_income_table_edits(inc_data, current_state, active_scenario, autosave_enabled):
-    return _persist_table("income", inc_data, current_state, active_scenario, autosave_enabled)
+def paginate_record_tables(_clicks, pages):
+    ctx = callback_context
+    if not ctx.triggered or not ctx.triggered[0]["value"]:
+        return no_update
+    triggered_id = ctx.triggered_id
+    pages = dict(pages or {})
+    table = triggered_id["table"]
+    current = pages.get(table, 0)
+    pages[table] = current + 1 if triggered_id["dir"] == "next" else max(0, current - 1)
+    return pages
 
 
 @callback(
-    Output("project-state-store", "data", allow_duplicate=True),
-    Output("save-status-indicator", "children", allow_duplicate=True),
-    Input("expenses-table", "data"),
-    State("project-state-store", "data"),
-    State("active-scenario-store", "data"),
-    State("autosave-enabled-store", "data"),
-    prevent_initial_call=True,
-)
-def persist_expenses_table_edits(exp_data, current_state, active_scenario, autosave_enabled):
-    return _persist_table("expenses", exp_data, current_state, active_scenario, autosave_enabled)
-
-
-@callback(
-    Output("project-state-store", "data", allow_duplicate=True),
-    Output("save-status-indicator", "children", allow_duplicate=True),
-    Input("assets-table", "data"),
-    State("project-state-store", "data"),
-    State("active-scenario-store", "data"),
-    State("autosave-enabled-store", "data"),
-    prevent_initial_call=True,
-)
-def persist_assets_table_edits(ast_data, current_state, active_scenario, autosave_enabled):
-    return _persist_table("assets", ast_data, current_state, active_scenario, autosave_enabled,
-                           percent_fields=("growth_rate",))
-
-
-@callback(
-    Output("project-state-store", "data", allow_duplicate=True),
-    Output("save-status-indicator", "children", allow_duplicate=True),
-    Input("liabilities-table", "data"),
-    State("project-state-store", "data"),
-    State("active-scenario-store", "data"),
-    State("autosave-enabled-store", "data"),
-    prevent_initial_call=True,
-)
-def persist_liabilities_table_edits(liab_data, current_state, active_scenario, autosave_enabled):
-    return _persist_table("liabilities", liab_data, current_state, active_scenario, autosave_enabled,
-                           percent_fields=("interest_rate",))
-
-
-@callback(
-    Output("project-state-store", "data", allow_duplicate=True),
-    Output("save-status-indicator", "children", allow_duplicate=True),
+    Output("record-modal-store", "data"),
+    Input({"type": "record-row", "table": ALL, "row": ALL}, "n_clicks"),
     Input("income-table-add-btn", "n_clicks"),
-    State("project-state-store", "data"),
-    State("active-scenario-store", "data"),
-    State("autosave-enabled-store", "data"),
-    prevent_initial_call=True,
-)
-def add_income_row(n, state, active_scenario, autosave_enabled):
-    if not n or state is None:
-        return no_update, no_update
-    new_state = copy.deepcopy(state)
-    rows = list(new_state.get("income", []))
-    rows.append({"category": "Other", "description": "New Income Source", "amount": 0.0})
-    new_state["income"] = rows
-    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
-    return new_state, label
-
-
-@callback(
-    Output("project-state-store", "data", allow_duplicate=True),
-    Output("save-status-indicator", "children", allow_duplicate=True),
     Input("expenses-table-add-btn", "n_clicks"),
-    State("project-state-store", "data"),
-    State("active-scenario-store", "data"),
-    State("autosave-enabled-store", "data"),
-    prevent_initial_call=True,
-)
-def add_expense_row(n, state, active_scenario, autosave_enabled):
-    if not n or state is None:
-        return no_update, no_update
-    new_state = copy.deepcopy(state)
-    rows = list(new_state.get("expenses", []))
-    rows.append({"category": "Other", "description": "New Expense", "amount": 0.0})
-    new_state["expenses"] = rows
-    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
-    return new_state, label
-
-
-@callback(
-    Output("project-state-store", "data", allow_duplicate=True),
-    Output("save-status-indicator", "children", allow_duplicate=True),
     Input("assets-table-add-btn", "n_clicks"),
-    State("project-state-store", "data"),
-    State("active-scenario-store", "data"),
-    State("autosave-enabled-store", "data"),
+    Input("liabilities-table-add-btn", "n_clicks"),
     prevent_initial_call=True,
 )
-def add_asset_row(n, state, active_scenario, autosave_enabled):
-    if not n or state is None:
-        return no_update, no_update
-    new_state = copy.deepcopy(state)
-    rows = list(new_state.get("assets", []))
-    rows.append({"category": "Investment", "description": "New Asset", "value": 0.0, "growth_rate": 0.05})
-    new_state["assets"] = rows
-    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
-    return new_state, label
+def open_record_modal(_row_clicks, _add_income, _add_expenses, _add_assets, _add_liabilities):
+    # Deliberately has NO Input on the modal's own footer buttons (Save/Cancel/
+    # Delete/...): those don't exist in the DOM until the modal has been opened
+    # once, and a Dash callback silently never fires for ANY of its Inputs if
+    # even one declared Input isn't currently present — exactly the failure
+    # mode already documented on persist_profile_and_allocation_edits above.
+    # Keeping this callback to only always-present components (row cells and
+    # the four static "Add Row" buttons) is what makes it actually fire.
+    ctx = callback_context
+    if not ctx.triggered or not ctx.triggered[0]["value"]:
+        # A table re-render (after any save/delete) recreates row components
+        # with n_clicks reset to 0, which Dash reports as a "change" and would
+        # otherwise re-open the modal as if the row had been clicked again —
+        # only a genuine click reports a truthy (nonzero) value.
+        return no_update
+    triggered_id = ctx.triggered_id
+
+    if isinstance(triggered_id, dict):
+        if triggered_id.get("type") == "record-row":
+            return {"table": triggered_id["table"], "row": triggered_id["row"], "confirm_delete": False}
+        return no_update
+
+    if triggered_id in _ADD_BTN_TO_TABLE:
+        return {"table": _ADD_BTN_TO_TABLE[triggered_id], "row": None, "confirm_delete": False}
+
+    return no_update
 
 
 @callback(
+    Output("record-modal-store", "data", allow_duplicate=True),
     Output("project-state-store", "data", allow_duplicate=True),
     Output("save-status-indicator", "children", allow_duplicate=True),
-    Input("liabilities-table-add-btn", "n_clicks"),
+    Input("record-modal-save-btn", "n_clicks"),
+    Input("record-modal-cancel-btn", "n_clicks"),
+    Input("record-modal-delete-btn", "n_clicks"),
+    State("record-modal-store", "data"),
+    State({"type": "record-field", "field": ALL}, "value"),
+    State({"type": "record-field", "field": ALL}, "id"),
     State("project-state-store", "data"),
     State("active-scenario-store", "data"),
     State("autosave-enabled-store", "data"),
     prevent_initial_call=True,
 )
-def add_liability_row(n, state, active_scenario, autosave_enabled):
-    if not n or state is None:
-        return no_update, no_update
-    new_state = copy.deepcopy(state)
-    rows = list(new_state.get("liabilities", []))
-    rows.append({"category": "Debt", "description": "New Liability",
-                 "value": 0.0, "interest_rate": 0.05, "monthly_payment": 0.0})
-    new_state["liabilities"] = rows
-    label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
-    return new_state, label
+def handle_record_modal_main_actions(
+    _save, _cancel, _delete, modal_state, field_values, field_ids, project_state, active_scenario, autosave_enabled,
+):
+    # Separate from open_record_modal above (see its comment): these three
+    # buttons only start existing once the modal has opened at least once, so
+    # bundling them into the same callback as the always-present row/add-row
+    # Inputs would silently block that other callback from ever firing too.
+    # They're ALSO kept separate from the delete-confirm sub-state's two
+    # buttons below (handle_record_modal_delete_confirm) — Save/Cancel/Delete
+    # and Yes-delete-it/Cancel-delete are mutually exclusive in the footer
+    # (never both rendered at once), so a callback listing all five as Inputs
+    # would itself have "missing" Inputs half the time and never fire at all.
+    ctx = callback_context
+    if not ctx.triggered or not ctx.triggered[0]["value"]:
+        return no_update, no_update, no_update
+    triggered_id = ctx.triggered_id
+
+    if triggered_id == "record-modal-cancel-btn":
+        return None, no_update, no_update
+
+    if triggered_id == "record-modal-delete-btn":
+        if not modal_state:
+            return no_update, no_update, no_update
+        return {**modal_state, "confirm_delete": True}, no_update, no_update
+
+    if triggered_id == "record-modal-save-btn":
+        if not modal_state or project_state is None:
+            return no_update, no_update, no_update
+        table, row_idx = modal_state["table"], modal_state["row"]
+        field_map = {fid["field"]: val for fid, val in zip(field_ids, field_values)}
+        row = {}
+        for fdef in _TABLE_FIELD_DEFS[table]:
+            field = fdef["field"]
+            raw = field_map.get(field)
+            if fdef["type"] == "number":
+                try:
+                    num = float(raw or 0.0)
+                except (TypeError, ValueError):
+                    num = 0.0
+                row[field] = num / 100.0 if fdef.get("percent") else num
+            else:
+                row[field] = raw or ""
+        new_state = copy.deepcopy(project_state)
+        rows = list(new_state.get(table, []))
+        if row_idx is not None and 0 <= row_idx < len(rows):
+            rows[row_idx] = row
+        else:
+            rows.append(row)
+        new_state[table] = rows
+        label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
+        return None, new_state, label
+
+    return no_update, no_update, no_update
+
+
+@callback(
+    Output("record-modal-store", "data", allow_duplicate=True),
+    Output("project-state-store", "data", allow_duplicate=True),
+    Output("save-status-indicator", "children", allow_duplicate=True),
+    Input("record-modal-delete-confirm-btn", "n_clicks"),
+    Input("record-modal-delete-cancel-btn", "n_clicks"),
+    State("record-modal-store", "data"),
+    State("project-state-store", "data"),
+    State("active-scenario-store", "data"),
+    State("autosave-enabled-store", "data"),
+    prevent_initial_call=True,
+)
+def handle_record_modal_delete_confirm(_confirm, _cancel, modal_state, project_state, active_scenario, autosave_enabled):
+    ctx = callback_context
+    if not ctx.triggered or not ctx.triggered[0]["value"]:
+        return no_update, no_update, no_update
+    triggered_id = ctx.triggered_id
+
+    if triggered_id == "record-modal-delete-cancel-btn":
+        if not modal_state:
+            return no_update, no_update, no_update
+        return {**modal_state, "confirm_delete": False}, no_update, no_update
+
+    if triggered_id == "record-modal-delete-confirm-btn":
+        if not modal_state or project_state is None:
+            return no_update, no_update, no_update
+        table, row_idx = modal_state["table"], modal_state["row"]
+        new_state = copy.deepcopy(project_state)
+        rows = list(new_state.get(table, []))
+        if row_idx is not None and 0 <= row_idx < len(rows):
+            rows.pop(row_idx)
+        new_state[table] = rows
+        label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
+        return None, new_state, label
+
+    return no_update, no_update, no_update
+
+
+@callback(
+    Output("record-edit-modal", "is_open"),
+    Output("record-edit-modal-title", "children"),
+    Output("record-edit-modal-body", "children"),
+    Output("record-edit-modal-footer", "children"),
+    Input("record-modal-store", "data"),
+    State("project-state-store", "data"),
+    prevent_initial_call=True,
+)
+def render_record_modal_content(modal_state, project_state):
+    if not modal_state or project_state is None:
+        return False, no_update, no_update, no_update
+
+    table, row_idx = modal_state["table"], modal_state["row"]
+    confirm_delete = modal_state.get("confirm_delete", False)
+    rows = project_state.get(table, [])
+    is_new = row_idx is None or not (0 <= row_idx < len(rows))
+    row_data = _TABLE_DEFAULTS[table] if is_new else rows[row_idx]
+    title = f"Add {_TABLE_TITLES[table]}" if is_new else f"Edit {_TABLE_TITLES[table]}"
+
+    body = [render_field_input(fdef, row_data.get(fdef["field"])) for fdef in _TABLE_FIELD_DEFS[table]]
+
+    if confirm_delete:
+        footer = [
+            html.Span(
+                "Delete this entry? This can't be undone.",
+                className="text-danger me-auto", style={"fontSize": "0.85rem", "fontWeight": 600, "alignSelf": "center"},
+            ),
+            dbc.Button("Cancel", id="record-modal-delete-cancel-btn", color="secondary", outline=True, className="me-2"),
+            dbc.Button("Yes, delete it", id="record-modal-delete-confirm-btn", color="danger"),
+        ]
+    else:
+        footer = [dbc.Button("Cancel", id="record-modal-cancel-btn", color="secondary", outline=True, className="me-auto")]
+        if not is_new:
+            footer.append(dbc.Button("Delete", id="record-modal-delete-btn", color="danger", outline=True, className="me-2"))
+        footer.append(dbc.Button("Save Changes", id="record-modal-save-btn", color="primary"))
+
+    return True, title, body, footer

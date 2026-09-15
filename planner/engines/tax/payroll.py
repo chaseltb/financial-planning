@@ -53,63 +53,88 @@ def calculate_payroll_tax(wages: float, filing_status: str, rules: Dict[str, Any
     }
 
 
-def calculate_self_employment_tax(net_earnings: float, filing_status: str, rules: Dict[str, Any]) -> Dict[str, Any]:
+def calculate_self_employment_tax(
+    net_earnings: float,
+    filing_status: str,
+    rules: Dict[str, Any],
+    ss_wage_base_used: float = 0.0,
+    medicare_earnings_used: float = 0.0,
+) -> Dict[str, Any]:
     """
     Calculates Self-Employment Tax: Social Security and Medicare for self-employed individuals.
     Net profit is reduced by 7.65% (multiplied by 92.35%) to find net self-employment earnings.
+
+    ss_wage_base_used / medicare_earnings_used let a caller net this calculation
+    against OTHER income (W-2 wages, or an earlier SE calculation on the same
+    return) that already counts against the single annual Social Security wage
+    base and the single Additional Medicare Tax threshold — both apply once per
+    taxpayer across ALL wage + self-employment income combined, not once per
+    income source (Schedule SE lines 8a-8d net out W-2 Social Security wages
+    before computing the SE portion; Form 8959 nets Additional Medicare Tax the
+    same way across combined Medicare wages + SE earnings).
     """
     se_factor = 0.9235
-    se_earnings = net_earnings * se_factor
-    
+    # A net loss produces zero SE tax and zero deduction — SE tax is never negative.
+    se_earnings = max(0.0, net_earnings) * se_factor
+
     ss_rate = rules.get("social_security_rate", 0.062) * 2  # 12.4%
     ss_limit = rules.get("social_security_limit", 184500.0)
     med_rate = rules.get("medicare_rate", 0.0145) * 2  # 2.9%
     add_med_rate = rules.get("additional_medicare_rate", 0.009)
-    
+
     thresholds = rules.get("additional_medicare_threshold", {"single": 200000.0, "married": 250000.0})
     add_med_threshold = thresholds.get(filing_status.lower(), 200000.0)
-    
-    # SS portion
-    ss_taxable = min(se_earnings, ss_limit)
+
+    # SS portion: only the wage-base room left after other wages/SE earnings
+    # already reported this year counts here.
+    ss_room = max(0.0, ss_limit - ss_wage_base_used)
+    ss_taxable = min(se_earnings, ss_room)
     ss_tax = ss_taxable * ss_rate
-    
-    # Medicare portion
+
+    # Medicare portion (no cap, unlike Social Security)
     med_tax = se_earnings * med_rate
-    
-    # Additional Medicare
-    add_med_taxable = max(0.0, se_earnings - add_med_threshold)
+
+    # Additional Medicare: the $200k/$250k threshold applies once across combined
+    # wages + SE earnings, so only the slice of THIS income that pushes the
+    # combined total past the threshold (net of what prior income already used
+    # of it) is taxed here.
+    combined_after = medicare_earnings_used + se_earnings
+    add_med_taxable = max(0.0, combined_after - add_med_threshold) - max(0.0, medicare_earnings_used - add_med_threshold)
+    add_med_taxable = max(0.0, add_med_taxable)
     add_med_tax = add_med_taxable * add_med_rate
-    
+
     total_se_tax = ss_tax + med_tax + add_med_tax
     deductible_se_tax = total_se_tax * 0.5
-    
+
     steps = [
         f"Net Self-Employment Earnings: Net Profit (${net_earnings:,.2f}) * 92.35% = ${se_earnings:,.2f}",
-        f"Self-Employment Social Security Tax: 12.4% of taxable earnings up to ${ss_limit:,.2f} -> 12.4% of ${ss_taxable:,.2f} = ${ss_tax:,.2f}",
+        f"Self-Employment Social Security Tax: 12.4% of taxable earnings up to ${ss_limit:,.2f} "
+        f"(${ss_wage_base_used:,.2f} of that base already used by other wages/earnings) -> 12.4% of ${ss_taxable:,.2f} = ${ss_tax:,.2f}",
         f"Self-Employment Medicare Tax: 2.9% of total earnings -> 2.9% of ${se_earnings:,.2f} = ${med_tax:,.2f}",
     ]
     if add_med_tax > 0:
         steps.append(
-            f"Additional Medicare Tax: 0.9% of earnings over ${add_med_threshold:,.2f} -> 0.9% of ${add_med_taxable:,.2f} = ${add_med_tax:,.2f}"
+            f"Additional Medicare Tax: 0.9% of combined wages/SE earnings over ${add_med_threshold:,.2f} -> 0.9% of ${add_med_taxable:,.2f} = ${add_med_tax:,.2f}"
         )
     else:
         steps.append(
-            f"Additional Medicare Tax: SE earnings do not exceed ${add_med_threshold:,.2f} threshold (no additional tax)"
+            f"Additional Medicare Tax: Combined wages/SE earnings do not exceed ${add_med_threshold:,.2f} threshold (no additional tax)"
         )
     steps.append(
         f"Deductible SE Tax (for AGI adjustment): 50% of Total SE Tax (${total_se_tax:,.2f}) = ${deductible_se_tax:,.2f}"
     )
-    
+
     return {
         "value": total_se_tax,
         "deductible_amount": deductible_se_tax,
         "social_security": ss_tax,
         "medicare": med_tax,
         "additional_medicare": add_med_tax,
+        "se_earnings": se_earnings,
         "trace": {
             "formula": "Total SE Tax = SE Social Security + SE Medicare + SE Additional Medicare",
             "inputs": {"net_earnings": net_earnings, "filing_status": filing_status},
-            "assumptions_used": "Self-Employment net earnings adjustment of 92.35% applied.",
+            "assumptions_used": "Self-Employment net earnings adjustment of 92.35% applied. Social Security wage base and Additional Medicare threshold are netted against other wages/SE earnings already reported this year.",
             "rules_referenced": f"2026 SE SS Cap: ${ss_limit:,.2f}, SS Rate: 12.4%, Medicare Rate: 2.9%, Add Medicare Rate: 0.9% over ${add_med_threshold:,.2f}",
             "steps": steps
         }

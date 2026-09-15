@@ -62,9 +62,18 @@ def layout():
                                                  html.H3(id="nw-total-assets", style={"color": "var(--accent-emerald)"})], width=4),
                                         dbc.Col([html.Div("Total Liabilities", className="text-muted", style={"fontSize": "0.8rem"}),
                                                  html.H3(id="nw-total-liab", style={"color": "var(--accent-blue)"})], width=4),
-                                        dbc.Col([html.Div("Net Worth", className="text-muted", style={"fontSize": "0.8rem"}),
+                                        dbc.Col([html.Div("Personal Net Worth", className="text-muted", style={"fontSize": "0.8rem"}),
                                                  html.H3(id="nw-net-worth", style={"color": "var(--accent-purple)"})], width=4),
                                     ]
+                                ),
+                                dbc.Row(
+                                    [
+                                        dbc.Col([html.Div("Business Equity Stake", className="text-muted", style={"fontSize": "0.8rem"}),
+                                                 html.H3(id="nw-business-equity", style={"color": "var(--accent-emerald)"})], width=6),
+                                        dbc.Col([html.Div("Combined Net Worth", className="text-muted", style={"fontSize": "0.8rem"}),
+                                                 html.H3(id="nw-combined-net-worth", style={"color": "var(--accent-emerald)"})], width=6),
+                                    ],
+                                    className="mt-3",
                                 ),
                                 html.Hr(style={"borderColor": "rgba(255,255,255,0.08)"}),
                                 html.Div(id="networth-assets-table-container", className="mb-4"),
@@ -107,6 +116,8 @@ def layout():
     Output("nw-total-assets",             "children"),
     Output("nw-total-liab",               "children"),
     Output("nw-net-worth",                "children"),
+    Output("nw-business-equity",          "children"),
+    Output("nw-combined-net-worth",       "children"),
     Output("networth-asset-pie",          "figure"),
     Output("networth-debt-pie",           "figure"),
     Output("networth-projection-chart",   "figure"),
@@ -117,7 +128,7 @@ def layout():
 )
 def populate_networth_page(state):
     if state is None:
-        return [no_update] * 8
+        return [no_update] * 10
 
     r = run_all_engines(state)
     nw = r["nw_result"]
@@ -145,6 +156,8 @@ def populate_networth_page(state):
         f"${nw['total_assets']:,.0f}",
         f"${nw['total_liabilities']:,.0f}",
         f"${nw['value']:,.0f}",
+        f"${r['business_equity_value']:,.0f}",
+        f"${r['combined_net_worth']:,.0f}",
         create_allocation_chart(nw["asset_allocation"], "Asset Classes"),
         create_allocation_chart(debt_alloc, "Debt Classes"),
         create_net_worth_trend(proj_df),

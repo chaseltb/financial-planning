@@ -189,3 +189,44 @@ def test_nc_state_tax_zero_income():
     res = calculate_nc_tax(0.0, 0.0, 0.0, "Sole Proprietorship", "single", nc_rules_2026)
     assert res["value"] == 0.0
     assert res["effective_rate"] == 0.0
+
+
+def test_self_employment_tax_negative_net_earnings_floors_at_zero():
+    # A loss quarter must never produce a negative SE tax / negative deduction —
+    # SE tax on a loss is $0, not a phantom credit.
+    res = calculate_self_employment_tax(-50000.0, "single", fed_rules_2026)
+    assert res["value"] == 0.0
+    assert res["deductible_amount"] == 0.0
+    assert res["se_earnings"] == 0.0
+
+
+def test_self_employment_tax_nets_ss_wage_base_against_w2_wages():
+    # $160,000 of W-2 wages already used $160,000 of the $184,500 SS wage base;
+    # only the remaining $24,500 of room should be subject to the 12.4% SE SS rate,
+    # not the full SE earnings amount independently re-capped at $184,500.
+    res = calculate_self_employment_tax(
+        150000.0, "single", fed_rules_2026,
+        ss_wage_base_used=160000.0, medicare_earnings_used=160000.0,
+    )
+    assert pytest.approx(res["social_security"]) == 24500.0 * 0.124
+
+
+def test_self_employment_tax_combines_additional_medicare_threshold():
+    # $150,000 W-2 + $100,000 SE profit ($92,350 SE earnings) = $242,350 combined
+    # Medicare earnings; only the $42,350 over the $200,000 threshold owes 0.9%.
+    res = calculate_self_employment_tax(
+        100000.0, "single", fed_rules_2026,
+        ss_wage_base_used=150000.0, medicare_earnings_used=150000.0,
+    )
+    assert pytest.approx(res["additional_medicare"]) == 42350.0 * 0.009
+
+
+def test_cap_gains_tax_uses_year_specific_brackets():
+    rules_with_cg = dict(fed_rules_2026)
+    rules_with_cg["capital_gains_brackets"] = {
+        "single": {"0pct_top": 10000.0, "15pct_top": 20000.0},
+    }
+    # $15,000 of gains stacked on $5,000 ordinary taxable income: $5,000 in the
+    # 0% bracket (up to 10,000), remaining $10,000 in the 15% bracket.
+    tax, _ = calculate_cap_gains_tax(15000.0, 5000.0, "single", rules_with_cg)
+    assert pytest.approx(tax) == 10000.0 * 0.15

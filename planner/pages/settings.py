@@ -115,7 +115,7 @@ def layout():
 
                                         dbc.Button(
                                             [html.I(className="bi bi-save me-1"), "Save Now"],
-                                            id="settings-save-now-btn", color="secondary", size="sm",
+                                            id="settings-save-now-btn", color="primary", size="sm",
                                             className="mb-2",
                                         ),
                                         html.Div(id="settings-save-now-status", style={"fontSize": "0.85rem"}),
@@ -145,11 +145,11 @@ def layout():
                                         [
                                             dbc.Button(
                                                 [html.I(className="bi bi-filetype-json me-1"), "Download Full JSON Backup"],
-                                                id="settings-export-json-btn", color="primary", className="me-2 mb-2"
+                                                id="settings-export-json-btn", color="secondary", outline=True, className="me-2 mb-2"
                                             ),
                                             dbc.Button(
                                                 [html.I(className="bi bi-file-earmark-spreadsheet me-1"), "Download Excel Sheet"],
-                                                id="settings-export-excel-btn", color="success", className="me-2 mb-2"
+                                                id="settings-export-excel-btn", color="secondary", outline=True, className="me-2 mb-2"
                                             ),
                                             dcc.Download(id="settings-download-component")
                                         ],

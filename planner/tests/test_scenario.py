@@ -57,6 +57,26 @@ def test_scenario_dot_notation_creates_missing_nested_section():
     assert "assumptions" not in baseline
 
 
+def test_scenario_flat_key_dict_merges_instead_of_overwriting():
+    # A flat (non-dotted) key whose value is a partial dict must merge into the
+    # existing dict, not replace it outright — otherwise unrelated sibling fields
+    # (entity_type, ownership_pct, ...) would be silently wiped.
+    baseline = {
+        "business": {
+            "entity_type": "S Corporation",
+            "ownership_pct": 100.0,
+            "owner_salary": 50000.0,
+        }
+    }
+    scenario = {"name": "Raise", "changes": {"business": {"owner_salary": 80000.0}}}
+
+    compiled = compile_scenario(baseline, scenario)
+
+    assert compiled["business"]["owner_salary"] == 80000.0
+    assert compiled["business"]["entity_type"] == "S Corporation"
+    assert compiled["business"]["ownership_pct"] == 100.0
+
+
 def test_scenario_missing_changes_key_defaults_to_no_changes():
     baseline = {"profile": {"filing_status": "single"}}
 

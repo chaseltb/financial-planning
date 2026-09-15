@@ -3,6 +3,7 @@ import numpy as np
 from typing import Dict, Any, List
 from planner.engines.tax.federal import calculate_federal_tax
 from planner.engines.tax.north_carolina import calculate_nc_tax
+from planner.engines.valuation import get_ownership_fraction
 
 def get_next_quarter(quarter_str: str) -> str:
     """
@@ -97,7 +98,7 @@ def run_forecast(
     entity_pays_owner_w2 = entity_type in ("S Corporation", "C Corporation")
     # This taxpayer's ownership stake (0.0-1.0). Distributions are this owner's
     # pro-rata share of net income after owner salary — not a separate manual input.
-    ownership_pct = max(0.0, min(1.0, float(business_profile.get("ownership_pct", 100.0)) / 100.0))
+    ownership_pct = get_ownership_fraction(business_profile)
 
     forecast_rows = []
 

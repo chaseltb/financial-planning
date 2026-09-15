@@ -1,6 +1,5 @@
 from dash import dash_table, html
 from dash.dash_table.Format import Format, Scheme, Group, Symbol
-import dash_bootstrap_components as dbc
 import pandas as pd
 from typing import List, Dict, Any, Optional
 
@@ -37,7 +36,6 @@ def render_editable_table(
     table_id: str,
     df: pd.DataFrame,
     columns_config: List[Dict[str, Any]],
-    add_row_btn: bool = True,
     empty_label: Optional[str] = None,
 ) -> html.Div:
     """
@@ -63,11 +61,6 @@ def render_editable_table(
                 f"No {noun} yet.",
                 className="text-muted mb-1",
                 style={"fontSize": "0.95rem", "fontWeight": "600"},
-            ),
-            html.P(
-                f"Click the button below to add your first entry.",
-                className="text-muted mb-3",
-                style={"fontSize": "0.82rem"},
             ),
         ],
         className="text-center py-4",
@@ -110,8 +103,14 @@ def render_editable_table(
         columns=columns,
         data=df.to_dict("records"),
         editable=True,
-        row_deletable=True,
+        # No per-row delete icon here (this component is only used for the
+        # spreadsheet-style forecast grid, where "deleting a quarter" isn't a
+        # meaningful action, not a list of records — see record_table.py for
+        # the click-row-to-edit/delete pattern used for actual record lists).
+        row_deletable=False,
         style_as_list_view=True,
+        page_action="native",
+        page_size=10,
         # Disabled: browser-level persistence would override fresh data on scenario switch.
         persistence=False,
         tooltip_header={
@@ -137,7 +136,7 @@ def render_editable_table(
             "backgroundColor": "var(--bg-secondary)",
             "color": "var(--text-primary)",
             "border": "1px solid var(--border-glass)",
-            "padding": "10px 14px",
+            "padding": "6px 10px",
             "fontFamily": "Inter, sans-serif",
             "fontSize": "0.85rem",
             "textAlign": "left",
@@ -153,7 +152,7 @@ def render_editable_table(
             "textTransform": "uppercase",
             "fontSize": "0.75rem",
             "letterSpacing": "0.05em",
-            "padding": "12px 14px",
+            "padding": "8px 10px",
         },
         # Active-cell border only (not a solid fill) so typed text stays readable.
         style_data_conditional=[
@@ -171,18 +170,4 @@ def render_editable_table(
         ],
     )
 
-    children = [empty_placeholder, table]
-    if add_row_btn:
-        button_label = f"Add {noun.rstrip('s').title()}" if is_empty else "Add Row"
-        children.append(
-            dbc.Button(
-                [html.I(className="bi bi-plus-circle me-1"), button_label],
-                id=f"{table_id}-add-btn",
-                n_clicks=0,
-                color="primary" if is_empty else "secondary",
-                className="mt-1" if is_empty else "mt-2",
-                size="sm",
-            )
-        )
-
-    return html.Div(children)
+    return html.Div([empty_placeholder, table])

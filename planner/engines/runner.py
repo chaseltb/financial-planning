@@ -7,7 +7,7 @@ from planner.config import DEFAULT_TAX_YEAR, DEFAULT_STATE
 from planner.engines.tax.federal import calculate_federal_tax
 from planner.engines.tax.north_carolina import calculate_nc_tax
 from planner.engines.networth import calculate_net_worth, project_net_worth
-from planner.engines.valuation import calculate_valuation, calculate_sensitivity
+from planner.engines.valuation import calculate_valuation, calculate_sensitivity, get_ownership_fraction
 from planner.engines.forecast import run_forecast, DEFAULT_SEED, NUMERIC_COLS
 from planner.engines.cashflow import calculate_combined_cashflow
 from planner.engines.allocation import calculate_budget_allocation
@@ -61,7 +61,7 @@ def run_all_engines(
     entity_type = state["business"].get("entity_type", "Sole Proprietorship")
     # Only S-Corps/C-Corps can legally run payroll for the owner; others take a draw instead.
     owner_w2_salary = owner_salary if entity_type in ("S Corporation", "C Corporation") else 0.0
-    ownership_pct = max(0.0, min(1.0, float(state["business"].get("ownership_pct", 100.0)) / 100.0))
+    ownership_pct = get_ownership_fraction(state["business"])
     filing_status = state["profile"].get("filing_status", "single")
 
     # ── Personal income map ───────────────────────────────────────────────
@@ -180,6 +180,14 @@ def run_all_engines(
         quarterly_allocation=quarterly_allocation,
     ))
 
+    # Combined net worth = personal net worth + the owner's equity stake in the
+    # business (business value * ownership %). Kept separate from nw_result so
+    # "Net Worth" (personal balance sheet) and "Combined Net Worth" (household +
+    # business) stay distinguishable everywhere they're displayed.
+    business_equity_value = val_result["value"] * ownership_pct
+    personal_net_worth = nw_result["value"]
+    combined_net_worth = personal_net_worth + business_equity_value
+
     return {
         # Tax
         "fed_tax": fed_tax,
@@ -210,6 +218,9 @@ def run_all_engines(
         # Net Worth
         "nw_result": nw_result,
         "nw_proj_df": nw_proj_df,
+        "personal_net_worth": personal_net_worth,
+        "business_equity_value": business_equity_value,
+        "combined_net_worth": combined_net_worth,
         # Forecast
         "forecast_df": forecast_df,
         "only_forecast_df": only_forecast_df,

@@ -47,15 +47,15 @@ def calculate_combined_cashflow(
         else:
             other_expenses += amt
             
-    # Add debt service payments (excluding mortgage if it is already counted in housing)
-    debt_service = 0.0
-    for liab in liabilities:
-        cat = liab.get("category")
-        monthly_pay = float(liab.get("monthly_payment", 0.0))
-        # Avoid double-counting mortgage if housing expenses already include it
-        if cat == "Mortgage" and housing > 0:
-            continue
-        debt_service += monthly_pay * 12.0
+    # Add debt service payments. The "Housing" expense category is for costs
+    # tracked separately from a mortgage (rent, property tax, insurance, HOA,
+    # utilities) — a mortgage's own payment lives on the Liabilities ledger via
+    # monthly_payment, which is the single authoritative source for it. A
+    # same-category-exists heuristic here previously dropped the ENTIRE mortgage
+    # payment from debt service whenever ANY "Housing" expense existed at all
+    # (even an unrelated one like HOA dues), silently overstating cash flow for
+    # any homeowner who also logs non-mortgage housing costs.
+    debt_service = sum(float(liab.get("monthly_payment", 0.0)) * 12.0 for liab in liabilities)
         
     # Pre-tax retirement contributions (outflow from gross cash, though it goes to assets)
     retirement_outflow = sum(retirement_contributions.values())

@@ -172,7 +172,6 @@ def populate_forecast_page(state, horizon):
 
     spreadsheet = render_editable_table(
         "forecast-spreadsheet", forecast_df, _FC_COLS,
-        add_row_btn=False,
         empty_label="quarterly records",
     )
 

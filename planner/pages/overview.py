@@ -106,24 +106,31 @@ def update_overview(state, explain_target, business_mode_enabled):
         if business_enabled
         else f"{r['effective_rate'] * 100:.1f}% effective"
     )
-    cards = [
-        render_metric_card(
-            "Combined Tax",
-            f"${r['combined_tax']:,.0f}",
-            combined_tax_subtitle,
-            "purple", "combined_tax",
-        ),
-        render_metric_card(
-            "Net Worth",
-            f"${nw_result['value']:,.0f}",
-            f"Assets: ${nw_result['total_assets']:,.0f}",
-            "", "net_worth",
-        ),
-    ]
+    cards = []
+    if business_enabled:
+        cards.append(render_metric_card(
+            "Combined Net Worth",
+            f"${r['combined_net_worth']:,.0f}",
+            f"Personal + {r['business_equity_value']:,.0f} equity stake",
+            "emerald", "combined_net_worth",
+            primary=True,
+        ))
+    cards.append(render_metric_card(
+        "Combined Tax",
+        f"${r['combined_tax']:,.0f}",
+        combined_tax_subtitle,
+        "purple", "combined_tax",
+    ))
+    cards.append(render_metric_card(
+        "Personal Net Worth",
+        f"${nw_result['value']:,.0f}",
+        f"Assets: ${nw_result['total_assets']:,.0f}",
+        "", "net_worth",
+    ))
     if business_enabled:
         cards.append(render_metric_card(
             "Business Value",
-            f"${val_result['valuations'].get('EBITDA Multiple', 0):,.0f}",
+            f"${val_result['value']:,.0f}",
             f"EBITDA × {multiples.get('ebitda', 6.0)}",
             "emerald", "business_value",
         ))
@@ -151,7 +158,7 @@ def update_overview(state, explain_target, business_mode_enabled):
             fed_tax["trace"]["steps"] + nc_tax["trace"]["steps"],
         ),
         "net_worth": render_explain_panel(
-            "Net Worth",
+            "Personal Net Worth",
             nw_result["trace"]["formula"],
             nw_result["trace"]["inputs"],
             nw_result["trace"]["assumptions_used"],
@@ -167,6 +174,23 @@ def update_overview(state, explain_target, business_mode_enabled):
             val_result["trace"]["assumptions_used"],
             val_result["trace"]["rules_referenced"],
             val_result["trace"]["steps"],
+        )
+        panels["combined_net_worth"] = render_explain_panel(
+            "Combined Net Worth",
+            "Combined Net Worth = Personal Net Worth + (Business Value × Ownership %)",
+            {
+                "Personal Net Worth": r["personal_net_worth"],
+                "Business Value": val_result["value"],
+                "Business Equity Stake": r["business_equity_value"],
+            },
+            "Business value is scaled by the owner's ownership percentage before being added to the household balance sheet.",
+            "Standard equity-stake accounting for closely-held businesses.",
+            [
+                f"Personal Net Worth: ${r['personal_net_worth']:,.2f}",
+                f"Business Value (EBITDA Multiple): ${val_result['value']:,.2f}",
+                f"Business Equity Stake: Business Value (${val_result['value']:,.2f}) × Ownership % = ${r['business_equity_value']:,.2f}",
+                f"Combined Net Worth: Personal Net Worth (${r['personal_net_worth']:,.2f}) + Business Equity Stake (${r['business_equity_value']:,.2f}) = ${r['combined_net_worth']:,.2f}",
+            ],
         )
     # If a business panel was selected before Business Mode got turned off,
     # fall back instead of rendering a target that's no longer in the dict.

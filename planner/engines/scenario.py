@@ -22,9 +22,17 @@ def apply_scenario_changes(
                 current = current[part]
             current[parts[-1]] = value
         else:
-            # Flat key: "payroll" -> apply to business or root
+            # Flat key, e.g. "forecast" or "business". If both the existing value
+            # and the incoming one are dicts, merge into the existing dict instead
+            # of replacing it outright — a partial dict here (e.g. {"business":
+            # {"owner_salary": 5000}}) would otherwise silently wipe every other
+            # sibling field (entity_type, ownership_pct, ...) instead of just
+            # overriding the one given.
             if isinstance(compiled, dict):
-                compiled[key] = value
+                if isinstance(value, dict) and isinstance(compiled.get(key), dict):
+                    compiled[key].update(value)
+                else:
+                    compiled[key] = value
                 
     return compiled
 

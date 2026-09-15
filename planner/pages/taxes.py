@@ -8,6 +8,7 @@ from planner.components.charts import create_bracket_progress_chart
 from planner.data_manager import load_tax_rules
 from planner.config import DEFAULT_TAX_YEAR, DEFAULT_STATE
 from planner.engines.runner import run_all_engines
+from planner.engines.tax_tips import generate_tax_tips
 
 dash.register_page(__name__, path="/taxes", title="Taxes")
 
@@ -145,8 +146,68 @@ def layout():
                     ),
                 ]
             ),
+            dbc.Row(
+                dbc.Col(
+                    html.Div(
+                        [
+                            html.H4(
+                                [html.I(className="bi bi-lightbulb me-2 text-warning"), "Tailored Tax Strategies"],
+                                className="mb-1"
+                            ),
+                            html.P(
+                                "Rule-based suggestions from your current numbers — a starting point for a "
+                                "conversation with a CPA, not filed tax advice.",
+                                className="text-muted mb-3",
+                                style={"fontSize": "0.82rem"},
+                            ),
+                            html.Div(id="tax-tips-container"),
+                        ],
+                        className="glass-card mb-4",
+                    ),
+                    width=12,
+                )
+            ),
         ],
         fluid=True,
+    )
+
+
+_TIP_CATEGORY_COLOR = {
+    "Personal": "var(--accent-blue)",
+    "Business": "var(--accent-emerald)",
+    "Investing": "var(--accent-purple)",
+}
+
+
+def _render_tax_tips(tips):
+    if not tips:
+        return html.P(
+            "No specific suggestions right now — your current numbers don't trip any of the "
+            "rule-based checks this page looks for.",
+            className="text-muted mb-0", style={"fontSize": "0.85rem"},
+        )
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Span(
+                                tip["category"],
+                                className="tax-tip-category",
+                                style={"color": _TIP_CATEGORY_COLOR.get(tip["category"], "var(--accent-blue)")},
+                            ),
+                            html.Div(tip["title"], className="tax-tip-title"),
+                        ],
+                    ),
+                    html.P(tip["body"], className="tax-tip-body mb-0"),
+                ],
+                className="tax-tip-card",
+            )
+            for tip in tips
+        ],
+        className="tax-tips-list",
     )
 
 
@@ -162,13 +223,14 @@ def layout():
     Output("tax-overview-text",          "children"),
     Output("tax-brackets-visualizer",    "figure"),
     Output("taxes-explain-container",    "children"),
+    Output("tax-tips-container",         "children"),
     Input("project-state-store", "data"),
     Input("business-mode-store", "data"),
     prevent_initial_call=False,
 )
 def populate_taxes_page(state, business_mode_enabled):
     if state is None:
-        return [no_update] * 10
+        return [no_update] * 11
 
     business_enabled = business_mode_enabled is not False
 
@@ -252,4 +314,5 @@ def populate_taxes_page(state, business_mode_enabled):
         overview_text,
         bracket_fig,
         explain,
+        _render_tax_tips(generate_tax_tips(state, r)),
     )

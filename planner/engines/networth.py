@@ -10,6 +10,17 @@ def calculate_net_worth(
     total_assets = sum(float(a.get("value", 0.0)) for a in assets)
     total_liabilities = sum(float(l.get("value", 0.0)) for l in liabilities)
     net_worth = total_assets - total_liabilities
+
+    # A record with no "value" key silently contributes $0 below rather than
+    # erroring — flag it here so a bad import/edit doesn't quietly understate
+    # net worth with no visible trace of why.
+    warnings = [
+        f"Asset '{a.get('description', 'Unnamed')}' is missing a value and was counted as $0."
+        for a in assets if "value" not in a
+    ] + [
+        f"Liability '{l.get('description', 'Unnamed')}' is missing a value and was counted as $0."
+        for l in liabilities if "value" not in l
+    ]
     
     # Asset Allocation
     asset_allocation = {}
@@ -47,7 +58,11 @@ def calculate_net_worth(
     steps.append("Liability Breakdown:")
     for l in liabilities:
         steps.append(f"  - {l.get('description', 'Unnamed')} ({l.get('category')}): ${float(l.get('value', 0.0)):,.2f} (Interest: {float(l.get('interest_rate', 0.0))*100:.1f}%)")
-        
+
+    if warnings:
+        steps.append("Data Warnings:")
+        steps.extend(f"  - {w}" for w in warnings)
+
     return {
         "value": net_worth,
         "total_assets": total_assets,
@@ -56,6 +71,7 @@ def calculate_net_worth(
         "asset_pct": asset_pct,
         "debt_allocation": debt_allocation,
         "debt_pct": debt_pct,
+        "warnings": warnings,
         "trace": {
             "formula": "Net Worth = Total Assets - Total Liabilities",
             "inputs": {

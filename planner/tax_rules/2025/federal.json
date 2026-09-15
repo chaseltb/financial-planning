@@ -24,6 +24,10 @@
       {"rate": 0.37, "threshold": 751600.0}
     ]
   },
+  "capital_gains_brackets": {
+    "single": {"0pct_top": 48350.0, "15pct_top": 533400.0},
+    "married": {"0pct_top": 96700.0, "15pct_top": 600050.0}
+  },
   "corporate_rate": 0.21,
   "additional_medicare_threshold": {
     "single": 200000.0,
