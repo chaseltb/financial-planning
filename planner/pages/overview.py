@@ -4,7 +4,11 @@ from dash import html, dcc, callback, Input, Output, no_update
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
-from planner.components.cards import render_metric_card
+from planner.components.cards import (
+    render_metric_card,
+    render_hero_metric_card,
+    render_companion_metrics_card,
+)
 from planner.components.charts import (
     create_net_worth_trend, create_business_trend,
     create_allocation_chart, apply_dark_layout,
@@ -18,11 +22,13 @@ dash.register_page(__name__, path="/", title="Overview")
 def layout():
     return dbc.Container(
         [
-            dbc.Row(id="overview-cards-container", className="mb-4"),
+            html.Div(id="overview-cards-container", className="overview-hero-row"),
             html.Div(id="overview-charts-container"),
         ],
         fluid=True,
     )
+
+
 
 
 def _render_charts_row(fig_nw, fig_biz, fig_alloc, explain, business_enabled):
@@ -106,40 +112,71 @@ def update_overview(state, explain_target, business_mode_enabled):
         if business_enabled
         else f"{r['effective_rate'] * 100:.1f}% effective"
     )
-    cards = []
+
     if business_enabled:
-        cards.append(render_metric_card(
-            "Combined Net Worth",
-            f"${r['combined_net_worth']:,.0f}",
-            f"Personal + {r['business_equity_value']:,.0f} equity stake",
-            "emerald", "combined_net_worth",
-            primary=True,
-        ))
-    cards.append(render_metric_card(
-        "Combined Tax",
-        f"${r['combined_tax']:,.0f}",
-        combined_tax_subtitle,
-        "purple", "combined_tax",
-    ))
-    cards.append(render_metric_card(
-        "Personal Net Worth",
-        f"${nw_result['value']:,.0f}",
-        f"Assets: ${nw_result['total_assets']:,.0f}",
-        "", "net_worth",
-    ))
-    if business_enabled:
-        cards.append(render_metric_card(
-            "Business Value",
-            f"${val_result['value']:,.0f}",
-            f"EBITDA × {multiples.get('ebitda', 6.0)}",
-            "emerald", "business_value",
-        ))
-    cards.append(render_metric_card(
-        "Cash Available",
-        f"${float(recent_q['Cash']):,.0f}",
-        f"End of {recent_q['Quarter']}",
-        "", "cash_available",
-    ))
+        hero_card = render_hero_metric_card(
+            title="Combined Net Worth",
+            value=f"${r['combined_net_worth']:,.0f}",
+            subtitle=f"Personal (${nw_result['value']:,.0f}) + ${r['business_equity_value']:,.0f} equity stake",
+            color_class="emerald",
+            explain_target="combined_net_worth",
+        )
+        companion_card = render_companion_metrics_card([
+            {
+                "title": "Combined Tax",
+                "value": f"${r['combined_tax']:,.0f}",
+                "subtitle": combined_tax_subtitle,
+                "color_class": "purple",
+                "explain_target": "combined_tax",
+            },
+            {
+                "title": "Personal Net Worth",
+                "value": f"${nw_result['value']:,.0f}",
+                "subtitle": f"Assets: ${nw_result['total_assets']:,.0f}",
+                "color_class": "",
+                "explain_target": "net_worth",
+            },
+            {
+                "title": "Business Value",
+                "value": f"${val_result['value']:,.0f}",
+                "subtitle": f"EBITDA × {multiples.get('ebitda', 6.0)}",
+                "color_class": "emerald",
+                "explain_target": "business_value",
+            },
+            {
+                "title": "Cash Available",
+                "value": f"${float(recent_q['Cash']):,.0f}",
+                "subtitle": f"End of {recent_q['Quarter']}",
+                "color_class": "",
+                "explain_target": "cash_available",
+            },
+        ])
+    else:
+        hero_card = render_hero_metric_card(
+            title="Personal Net Worth",
+            value=f"${nw_result['value']:,.0f}",
+            subtitle=f"Assets: ${nw_result['total_assets']:,.0f} · Liabilities: ${nw_result['total_liabilities']:,.0f}",
+            color_class="emerald",
+            explain_target="net_worth",
+        )
+        companion_card = render_companion_metrics_card([
+            {
+                "title": "Combined Tax",
+                "value": f"${r['combined_tax']:,.0f}",
+                "subtitle": combined_tax_subtitle,
+                "color_class": "purple",
+                "explain_target": "combined_tax",
+            },
+            {
+                "title": "Cash Available",
+                "value": f"${float(recent_q['Cash']):,.0f}",
+                "subtitle": f"End of {recent_q['Quarter']}",
+                "color_class": "",
+                "explain_target": "cash_available",
+            },
+        ])
+
+    cards = [hero_card, companion_card]
 
     fig_nw = create_net_worth_trend(nw_proj_df)
     fig_biz = create_business_trend(forecast_df)
@@ -199,3 +236,20 @@ def update_overview(state, explain_target, business_mode_enabled):
     explain = panels.get(target, render_empty_explain_panel())
 
     return cards, _render_charts_row(fig_nw, fig_biz, fig_alloc, explain, business_enabled)
+
+
+@callback(
+    Output("explain-target-store", "data"),
+    Input({"type": "explain-trigger", "target": dash.ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def handle_explain_click(n_clicks):
+    from dash import callback_context
+    import json
+    ctx = callback_context
+    if not ctx.triggered or not any(n_clicks or []):
+        return no_update
+    prop_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    target = json.loads(prop_id).get("target")
+    return target or no_update
+
