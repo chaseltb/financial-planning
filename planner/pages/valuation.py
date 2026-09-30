@@ -150,7 +150,7 @@ def layout():
                                             dbc.Col(
                                                 [
                                                     html.Label("Base Method"),
-                                                    dcc.Dropdown(
+                                                    dbc.Select(
                                                         id="valuation-sensitivity-method",
                                                         options=[
                                                             {"label": "Revenue Multiple",    "value": "Revenue Multiple"},
@@ -160,9 +160,7 @@ def layout():
                                                             {"label": "FCF Multiple",        "value": "FCF Multiple"},
                                                         ],
                                                         value="EBITDA Multiple",
-                                                        clearable=False,
                                                         className="mb-3",
-                                                        style={"color": "#0f172a"},
                                                     ),
                                                 ],
                                                 width=6,

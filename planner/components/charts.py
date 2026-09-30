@@ -19,6 +19,10 @@ def apply_dark_layout(fig, title_text: str):
             "font": {"family": "Outfit", "size": 18, "color": _CHART_TITLE_COLOR},
             "x": 0.05
         },
+        # Fixed default height: with autosize and no height, Plotly sizes to its container,
+        # which sizes to the chart's content, so charts (and their cards) kept growing.
+        height=360,
+        autosize=True,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font={"family": "Inter", "color": _CHART_TEXT_COLOR},
@@ -52,7 +56,7 @@ def add_empty_note(fig, text: str):
         font={"size": 14, "color": _CHART_TEXT_COLOR},
     )
     fig.data = ()
-    fig.update_layout(showlegend=False)
+    fig.update_layout(showlegend=False, height=200)
     fig.update_xaxes(visible=False)
     fig.update_yaxes(visible=False)
     return fig

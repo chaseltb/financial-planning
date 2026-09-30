@@ -863,25 +863,25 @@ input.form-control, select.form-select {
 }
 
 /* Dropdowns (react-select) — themed instead of a white box on the dark UI. */
-.dash-dropdown .Select-control {
+.Select-control {
     background-color: var(--bg-secondary) !important;
     border: 1px solid var(--border-glass) !important;
     border-radius: 8px !important;
     color: var(--text-primary) !important;
 }
 
-.dash-dropdown .Select-value-label,
-.dash-dropdown .Select-placeholder,
-.dash-dropdown .Select--single > .Select-control .Select-value .Select-value-label,
-.dash-dropdown .Select-input > input {
+.Select-value-label,
+.Select-placeholder,
+.Select--single > .Select-control .Select-value .Select-value-label,
+.Select-input > input {
     color: var(--text-primary) !important;
 }
 
-.dash-dropdown .Select-arrow {
+.Select-arrow {
     border-top-color: var(--text-secondary) !important;
 }
 
-.dash-dropdown .Select-menu-outer {
+.Select-menu-outer {
     background-color: var(--bg-secondary) !important;
     border: 1px solid var(--border-glass) !important;
     border-radius: 8px !important;
@@ -889,22 +889,22 @@ input.form-control, select.form-select {
     z-index: 200;
 }
 
-.dash-dropdown .Select-option {
+.Select-option {
     background-color: transparent !important;
     color: var(--text-primary) !important;
 }
 
-.dash-dropdown .Select-option.is-focused,
-.dash-dropdown .Select-option:hover {
+.Select-option.is-focused,
+.Select-option:hover {
     background-color: var(--active-nav-bg) !important;
 }
 
-.dash-dropdown .Select-option.is-selected {
+.Select-option.is-selected {
     background-color: var(--active-nav-bg) !important;
     font-weight: 600;
 }
 
-.dash-dropdown .Select.is-focused > .Select-control {
+.Select.is-focused > .Select-control {
     border-color: var(--accent-blue) !important;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
 }
@@ -986,4 +986,211 @@ body:has(._dash-loading-callback)::before {
     body, .glass-card, .explain-panel { background: #fff !important; color: #000 !important; }
     .glass-card { border: 1px solid #ccc !important; break-inside: avoid; backdrop-filter: none !important; }
     .metric-value, .metric-value-lg, .text-muted, h1, h2, h3, h4 { color: #000 !important; }
+}
+
+/* Header: never let the scenario picker collapse to zero width when space is tight. */
+.app-header {
+    flex-wrap: wrap;
+}
+
+.header-controls {
+    flex-shrink: 0;
+}
+
+.header-controls .dash-dropdown {
+    flex: 0 0 260px;
+    min-width: 220px;
+}
+
+/* KPI strip: all headline metrics in one card, divided by thin rules. Hidden
+   (business-only) items drop out and the rest re-flow. */
+.kpi-strip {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    padding: 0;
+    height: auto;
+}
+
+.kpi-item {
+    padding: 24px;
+    min-width: 0;
+    border-left: 1px solid var(--border-glass);
+    box-shadow: none;
+}
+
+.kpi-item:first-child {
+    border-left: none;
+}
+
+.kpi-item-primary {
+    grid-column: span 1;
+    min-width: 260px;
+}
+
+.kpi-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.kpi-header .metric-title {
+    margin-bottom: 0;
+}
+
+.kpi-subtitle {
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 1100px) {
+    .kpi-strip {
+        grid-auto-flow: row;
+        grid-template-columns: repeat(2, 1fr);
+        grid-auto-columns: auto;
+    }
+
+    .kpi-item, .kpi-item:first-child {
+        border-left: none;
+        border-top: 1px solid var(--border-glass);
+    }
+
+    .kpi-item-primary {
+        grid-column: 1 / -1;
+        border-top: none;
+    }
+}
+
+@media (max-width: 560px) {
+    .kpi-strip {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Options in Dash's virtualized dropdown menu use their own classes. */
+.VirtualizedSelectOption {
+    background-color: transparent !important;
+    color: var(--text-primary) !important;
+}
+
+.VirtualizedSelectFocusedOption {
+    background-color: var(--active-nav-bg) !important;
+}
+
+.VirtualizedSelectSelectedOption {
+    font-weight: 600;
+    background-color: var(--active-nav-bg) !important;
+}
+
+.VirtualizedSelectDisabledOption {
+    color: var(--text-secondary) !important;
+}
+
+/* Switches and outline buttons: bootswatch SLATE leaves a checked switch gray and
+   outline-secondary text too dim. Use the accent color and readable text. */
+.form-check-input:checked {
+    background-color: var(--accent-blue) !important;
+    border-color: var(--accent-blue) !important;
+}
+
+.btn-outline-secondary {
+    color: var(--text-primary) !important;
+    border-color: var(--border-glass) !important;
+    background: transparent !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--active-nav-bg) !important;
+}
+
+/* Let long scenario names show in full: the menu may be wider than its control. */
+.Select-menu-outer {
+    min-width: 100%;
+    width: max-content !important;
+    max-width: 380px;
+}
+
+/* Charts never size themselves from their container's content (prevents the runaway
+   vertical growth loop); each figure carries its own height. */
+.dash-graph {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* Dash gives a Graph an inline "height: 100%" unless the page sets one. A percentage
+   height inside a card whose height comes from its own content is circular, so the
+   chart (and card) grew without bound. Fall back to a fixed height instead; pages that
+   set their own height are unaffected. */
+.dash-graph[style*="height: 100%"] {
+    height: 360px !important;
+}
+
+/* Compact form cards (Business page): label + control pairs in a two-column grid. */
+.compact-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 16px;
+    align-items: start;
+}
+
+.compact-field label {
+    font-size: 0.8rem;
+    margin-bottom: 3px;
+    display: block;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.compact-field .mb-3,
+.compact-field .input-group {
+    margin-bottom: 0 !important;
+}
+
+.compact-field .form-control,
+.compact-field .input-group-text {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.9rem;
+}
+
+.compact-field .Select-control {
+    min-height: 34px;
+    height: 34px;
+}
+
+.compact-field .Select-value, .compact-field .Select-placeholder {
+    line-height: 32px;
+}
+
+@media (max-width: 560px) {
+    .compact-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Disabled fields: a dimmed version of the field background in BOTH themes (the earlier
+   hard-coded dark tint turned into a solid gray block in light mode). */
+.form-control:disabled, .form-control[readonly], .form-select:disabled {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-secondary) !important;
+    opacity: 0.75 !important;
+}
+
+/* Native selects (dbc.Select) replaced the react-select dropdowns. */
+.header-controls select.form-select {
+    width: 260px;
+    min-width: 220px;
+    flex: 0 0 auto;
+}
+
+select.form-select {
+    cursor: pointer;
+}
+
+select.form-select option {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
 }

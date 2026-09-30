@@ -128,7 +128,7 @@ def layout():
                                         ],
                                         className="bracket-legend mb-2",
                                     ),
-                                    dcc.Graph(id="tax-brackets-visualizer", config={"displayModeBar": False}),
+                                    dcc.Graph(id="tax-brackets-visualizer", config={"displayModeBar": False}, style={"height": "110px"}),
                                 ],
                                 className="glass-card mb-4",
                             ),

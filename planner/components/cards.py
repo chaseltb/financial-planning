@@ -66,3 +66,41 @@ def render_metric_card(title: str, value: str, subtitle: str = None, color_class
         xl=xl if xl is not None else (6 if primary else 3),
         className="mb-4"
     )
+
+
+def render_kpi_strip(items):
+    """One card holding every headline metric, separated by thin dividers, instead of
+    a row of separate small cards. items: [{"title", "value", "subtitle", "color_class",
+    "explain_target", "primary", "business_only"}, ...]. The primary item is rendered
+    larger; business-only items drop out (and the rest re-flow) when Business Mode is off."""
+    cells = []
+    for item in items:
+        primary = item.get("primary", False)
+        header = [html.Div(item["title"], className="metric-title")]
+        if item.get("explain_target"):
+            header.append(
+                html.Button(
+                    html.I(className="bi bi-info-circle", **{"aria-hidden": "true"}),
+                    id={"type": "explain-trigger", "target": item["explain_target"]},
+                    className="explain-trigger-btn",
+                    n_clicks=0,
+                    title=f"Show how {item['title']} is calculated",
+                    **{"aria-label": f"Show how {item['title']} is calculated"},
+                )
+            )
+        classes = "kpi-item metric-card " + item.get("color_class", "")
+        if primary:
+            classes += " kpi-item-primary"
+        if item.get("business_only"):
+            classes += " business-only"
+        cells.append(
+            html.Div(
+                [
+                    html.Div(header, className="kpi-header"),
+                    html.Div(item["value"], className="metric-value-lg" if primary else "metric-value"),
+                    html.Div(item.get("subtitle") or "\u2014", className="kpi-subtitle"),
+                ],
+                className=classes,
+            )
+        )
+    return html.Div(cells, className="glass-card kpi-strip")

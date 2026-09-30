@@ -17,6 +17,97 @@ dash.register_page(__name__, path="/business", title="Business Planning")
 _CONTENT_ID = "business-page-content"
 
 
+def _compact_card(children, className="glass-card mb-4"):
+    """A card whose label+control groups sit in a two-column grid. `children` is the usual flat
+    list (heading, intro, then Label / control / Tooltip ... repeating); everything before the first
+    Label stays full width, and each Label starts a new field group."""
+    prefix, groups = [], []
+    for child in children:
+        if isinstance(child, html.Label):
+            groups.append([child])
+        elif groups:
+            groups[-1].append(child)
+        else:
+            prefix.append(child)
+    fields = [html.Div(g, className="compact-field") for g in groups]
+    trailing = []
+    if fields:
+        # Non-field elements that follow the last field (e.g. a footer note) stay full width.
+        last = groups[-1]
+        keep = []
+        for el in last:
+            (trailing if getattr(el, "id", None) == "biz-deduction-total" else keep).append(el)
+        fields[-1] = html.Div(keep, className="compact-field")
+    return html.Div([*prefix, html.Div(fields, className="compact-grid"), *trailing], className=className)
+
+
+# Tax-only business deductions (see engines/records.py business_deduction_totals). Cash expenses
+# belong in "Annual Operating Expenses"; these lower TAXABLE profit without changing cash flow.
+_DEDUCTION_FIELDS = [
+    ("ded_home_office", "Home Office",
+     "Your deductible share of rent/mortgage interest, utilities and insurance for a space used regularly and "
+     "exclusively for the business (or the simplified $5/sq ft method, up to $1,500). Usually already paid from "
+     "personal funds, so it is not part of operating expenses."),
+    ("ded_vehicle", "Vehicle & Mileage",
+     "Business use of a personal vehicle: business miles x the IRS standard mileage rate, or the actual-expense share."),
+    ("ded_depreciation", "Depreciation / Section 179",
+     "Annual depreciation or Section 179 expensing on equipment and other business assets. A non-cash deduction, "
+     "so it lowers taxable profit but not cash flow."),
+    ("ded_health_insurance", "Self-Employed Health Insurance",
+     "Health, dental and long-term-care premiums you pay for yourself and family. Deducted from income (AGI), "
+     "limited to the business's profit; it does not reduce self-employment tax. Not available while you are "
+     "also eligible for an employer-subsidized plan."),
+    ("ded_other", "Other Tax Deductions",
+     "Anything else deductible that is not already in operating expenses (e.g. professional development, "
+     "startup costs amortization)."),
+]
+
+
+def _deduction_card():
+    rows = []
+    for field, label, tip in _DEDUCTION_FIELDS:
+        label_id = f"label-{field.replace('_', '-')}"
+        rows += [
+            html.Label([html.I(className="bi bi-info-circle me-1 text-muted"), label], id=label_id),
+            dbc.InputGroup(
+                [
+                    dbc.InputGroupText("$"),
+                    dbc.Input(id={"type": "business-input", "field": field},
+                              type="number", debounce=True, min=0, step=1, value=0),
+                    dbc.InputGroupText("/yr"),
+                ],
+                className="mb-3",
+            ),
+            dbc.Tooltip(tip, target=label_id),
+        ]
+    return _compact_card(
+        [
+            html.H4(
+                [
+                    "Business Tax Deductions",
+                    html.Button(
+                        html.I(className="bi bi-info-circle", **{"aria-hidden": "true"}),
+                        id="deductions-info-btn",
+                        type="button",
+                        className="explain-trigger-btn ms-2",
+                        title="About these deductions",
+                        **{"aria-label": "About business tax deductions"},
+                    ),
+                ],
+                className="mb-2 d-flex align-items-center",
+            ),
+            dbc.Tooltip(
+                "Tax-only deductions that lower taxable profit (income tax, SE tax, QBI) but not cash flow "
+                "or valuation. Cash expenses belong in Operating Expenses.",
+                target="deductions-info-btn",
+            ),
+            *rows,
+            html.Div(id="biz-deduction-total", className="text-muted", style={"fontSize": "0.85rem"}),
+        ],
+        className="glass-card mb-4",
+    )
+
+
 def layout():
     return dbc.Container(
         [
@@ -38,14 +129,16 @@ def layout():
                 [
                     dbc.Col(
                         [
-                        html.Div(
+                        _compact_card(
                             [
-                                html.H4("Entity Choice & Growth Settings", className="mb-4"),
+                                html.H4("Entity Choice & Growth Settings", className="mb-3"),
                                 html.Label(
                                     [html.I(className="bi bi-info-circle me-1 text-muted"), "Business Entity Type"],
                                     id="label-entity-type"
                                 ),
-                                dcc.Dropdown(
+                                # Native <select>: renders instantly (dcc.Dropdown loads lazily and showed up blank
+                                # in places), and is themed by the same .form-select rules as the other inputs.
+                                dbc.Select(
                                     id={"type": "business-input", "field": "entity_type"},
                                     options=[
                                         {"label": "Sole Proprietorship",  "value": "Sole Proprietorship"},
@@ -55,9 +148,7 @@ def layout():
                                         {"label": "C Corporation",        "value": "C Corporation"},
                                     ],
                                     value="Sole Proprietorship",
-                                    clearable=False,
-                                    className="mb-3",
-                                    style={"color": "#0f172a"},
+                                    size="sm",
                                 ),
                                 dbc.Tooltip("Entity structure affects payroll requirements, self-employment taxes, and corporate rates.", target="label-entity-type"),
                                 
@@ -65,17 +156,22 @@ def layout():
                                     [html.I(className="bi bi-info-circle me-1 text-muted"), "W-2 Owner's Salary"],
                                     id="label-owner-salary"
                                 ),
-                                dbc.InputGroup(
-                                    [
-                                        dbc.InputGroupText("$"),
-                                        dbc.Input(
-                                            id={"type": "business-input", "field": "owner_salary"},
-                                            type="number", debounce=True, min=0, step=1, value=0
-                                        ),
-                                        dbc.InputGroupText("/yr"),
-                                    ],
-                                    className="mb-1"
+                                # Wrapper div is the tooltip target: a disabled input fires no hover events.
+                                html.Div(
+                                    dbc.InputGroup(
+                                        [
+                                            dbc.InputGroupText("$"),
+                                            dbc.Input(
+                                                id={"type": "business-input", "field": "owner_salary"},
+                                                type="number", debounce=True, min=0, step=1, value=0
+                                            ),
+                                            dbc.InputGroupText("/yr"),
+                                        ],
+                                        className="mb-1"
+                                    ),
+                                    id="owner-salary-field-wrap",
                                 ),
+                                dbc.Tooltip(id="tooltip-owner-salary-field", children="", target="owner-salary-field-wrap"),
                                 html.Div(
                                     id="owner-salary-inapplicable-note",
                                     className="text-warning mb-3",
@@ -143,9 +239,9 @@ def layout():
                             ],
                             className="glass-card mb-4",
                         ),
-                        html.Div(
+                        _compact_card(
                             [
-                                html.H4("Business Run-Rate Financials (Annualized)", className="mb-4"),
+                                html.H4("Business Run-Rate Financials (Annualized)", className="mb-3"),
                                 
                                 html.Label(
                                     [html.I(className="bi bi-info-circle me-1 text-muted"), "Annual Revenue"],
@@ -182,7 +278,7 @@ def layout():
                                 dbc.Tooltip("Annual Cost of Goods Sold (direct manufacturing, labor, or production costs).", target="label-biz-cogs"),
                                 
                                 html.Label(
-                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Annual Payroll (Non-Owner staff)"],
+                                    [html.I(className="bi bi-info-circle me-1 text-muted"), "Annual Payroll (non-owner)"],
                                     id="label-biz-pay"
                                 ),
                                 dbc.InputGroup(
@@ -234,8 +330,9 @@ def layout():
                             ],
                             className="glass-card mb-4",
                         ),
+                            _deduction_card(),
                         ],
-                        lg=4,
+                        lg=5,
                     ),
                     dbc.Col(
                         [
@@ -280,7 +377,7 @@ def layout():
                                 className="glass-card mb-4",
                             ),
                         ],
-                        lg=8,
+                        lg=7,
                     ),
                 ]
             ),
@@ -308,7 +405,10 @@ _OWNER_SALARY_TOOLTIPS = {
     Output({"type": "business-input", "field": "ownership_pct"},  "value"),
     Output({"type": "business-input", "field": "revenue_growth"}, "value"),
     Output({"type": "business-input", "field": "expense_growth"}, "value"),
+    *[Output({"type": "business-input", "field": f}, "value") for f, _l, _t in _DEDUCTION_FIELDS],
+    Output("biz-deduction-total", "children"),
     Output("tooltip-owner-salary", "children"),
+    Output("tooltip-owner-salary-field", "children"),
     Output({"type": "business-input", "field": "owner_salary"}, "disabled"),
     Output("owner-salary-inapplicable-note", "children"),
     Output("owner-salary-inapplicable-note", "style"),
@@ -325,7 +425,7 @@ _OWNER_SALARY_TOOLTIPS = {
 )
 def populate_business_page(state):
     if state is None:
-        return [no_update] * 17
+        return [no_update] * (17 + len(_DEDUCTION_FIELDS) + 2)
 
     r = run_all_engines(state)
     b = state.get("business", {})
@@ -342,11 +442,14 @@ def populate_business_page(state):
     # than silently ignoring whatever the user types with no visible sign why,
     # disable the field and say so inline once the entity type doesn't support it.
     owner_salary_applicable = entity_type in ("S Corporation", "C Corporation")
-    inapplicable_note = (
-        "" if owner_salary_applicable
-        else f"Not applicable for a {entity_type} — this field has no effect on the numbers below."
+    # The field is simply disabled; a short tooltip explains why (no inline note, which made the row taller).
+    owner_salary_tip = (
+        _OWNER_SALARY_TOOLTIPS.get(entity_type, _OWNER_SALARY_TOOLTIPS["S Corporation"])
+        if owner_salary_applicable
+        else f"Not applicable for a {entity_type} — no effect on the numbers."
     )
-    inapplicable_style = {"fontSize": "0.8rem", "display": "none" if owner_salary_applicable else "block"}
+    inapplicable_note = ""
+    inapplicable_style = {"display": "none"}
 
     # A business with any real activity shouldn't keep being told it's empty.
     has_business_activity = r["revenue_q"] > 0
@@ -358,7 +461,10 @@ def populate_business_page(state):
         b.get("ownership_pct", 100),
         float(b.get("revenue_growth", 0.05)) * 100,
         float(b.get("expense_growth", 0.03)) * 100,
-        _OWNER_SALARY_TOOLTIPS.get(entity_type, _OWNER_SALARY_TOOLTIPS["Sole Proprietorship"]),
+        *[float(b.get(f, 0.0) or 0.0) for f, _l, _t in _DEDUCTION_FIELDS],
+        (f"Total deductions entered: ${r['business_tax_deductions']:,.0f}/yr" if r["business_tax_deductions"] > 0 else ""),
+        owner_salary_tip,
+        owner_salary_tip,
         not owner_salary_applicable,
         inapplicable_note,
         inapplicable_style,
@@ -405,6 +511,11 @@ def persist_business_edits(biz_vals, biz_ids, current_state, active_scenario, au
                     val = max(1.0, min(100.0, float(val or 100.0)))
                 except ValueError:
                     val = 100.0
+            elif field.startswith("ded_"):
+                try:
+                    val = max(0.0, float(val or 0.0))
+                except ValueError:
+                    val = 0.0
             elif field in ["revenue_growth", "expense_growth"]:
                 # Field displays whole percentage points (5 = 5%); stored as a fraction.
                 try:

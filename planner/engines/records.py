@@ -37,6 +37,24 @@ def is_taxable(record: Dict[str, Any]) -> bool:
     return str(record.get("taxable", True)).strip().lower() not in ("false", "0", "no", "n")
 
 
+DEDUCTION_FIELDS = {
+    # Tax-only reductions to business profit (mostly non-cash, or cash already modeled elsewhere).
+    "profit": ("ded_home_office", "ded_vehicle", "ded_depreciation", "ded_other"),
+    # Self-employed health insurance: an above-the-line adjustment to AGI, not to business profit.
+    "health_insurance": ("ded_health_insurance",),
+}
+
+
+def business_deduction_totals(business: Dict[str, Any]) -> Dict[str, float]:
+    """Annual tax-only deductions entered on the Business page, as
+    {"profit": reduces taxable business profit, "health_insurance": AGI adjustment}.
+    Negative or malformed entries count as 0."""
+    out = {}
+    for bucket, fields in DEDUCTION_FIELDS.items():
+        out[bucket] = sum(max(0.0, _to_float((business or {}).get(f, 0.0))) for f in fields)
+    return out
+
+
 def taxable_income_by_category(income: List[Dict[str, Any]]) -> Dict[str, float]:
     """Sums annualized taxable income per category."""
     totals: Dict[str, float] = {}

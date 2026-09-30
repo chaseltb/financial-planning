@@ -99,16 +99,14 @@ def layout():
                                     [html.I(className="bi bi-info-circle me-1 text-muted"), "Filing Status"],
                                     id="label-filing"
                                 ),
-                                dcc.Dropdown(
+                                dbc.Select(
                                     id={"type": "profile-input", "field": "filing_status"},
                                     options=[
                                         {"label": "Single",                   "value": "single"},
                                         {"label": "Married Filing Jointly",   "value": "married"},
                                     ],
                                     value="single",
-                                    clearable=False,
                                     className="mb-3",
-                                    style={"color": "#0f172a"},
                                 ),
                                 dbc.Tooltip("Filing status affects federal & state progressive tax brackets and standard deductions.", target="label-filing"),
                                 

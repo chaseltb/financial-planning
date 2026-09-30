@@ -1,5 +1,6 @@
 """Persistent app header, rendered once in app.layout (not per-page)."""
-from dash import html, dcc
+from dash import html
+import dash_bootstrap_components as dbc
 
 from planner.config import BASELINE_DISPLAY_NAME
 
@@ -39,11 +40,10 @@ def render_header():
                 [
                     html.Label("Scenario:", htmlFor="header-scenario-dropdown", className="text-muted mb-0",
                                style={"fontSize": "0.9rem"}),
-                    dcc.Dropdown(
+                    dbc.Select(
                         id="header-scenario-dropdown",
                         options=[{"label": BASELINE_DISPLAY_NAME, "value": "Baseline"}],
                         value="Baseline",
-                        clearable=False,
                         style={"width": "260px", "display": "inline-block"},
                     ),
                     # role="status" so screen readers announce save results.

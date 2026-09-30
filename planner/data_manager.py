@@ -98,10 +98,17 @@ def save_csv(path: Path, items: List[Dict[str, Any]], fieldnames: List[str] = No
     if not items and not fieldnames:
         return
     if not fieldnames and items:
-        fieldnames = list(items[0].keys())
+        # Union of every row's keys (first-seen order). Taking only the first row's keys
+        # made saving fail whenever a later row had extra columns (e.g. id/frequency/taxable
+        # on rows from a scenario whose first row lacked them).
+        fieldnames = []
+        for item in items:
+            for key in item:
+                if key not in fieldnames:
+                    fieldnames.append(key)
 
     def _write(f):
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=fieldnames, restval="")
         writer.writeheader()
         for item in items:
             writer.writerow(item)

@@ -52,3 +52,10 @@ def test_states_equal_ignores_numeric_string_differences():
     assert dm.states_equal({"a": "0.0", "b": [1, "2"]}, {"a": 0, "b": [1.0, 2]})
     assert not dm.states_equal({"a": "0.0"}, {"a": 1})
     assert not dm.states_equal({"a": "x"}, {"a": "y"})
+
+
+def test_save_csv_handles_rows_with_different_columns(tmp_data):
+    rows = [{"category": "W-2", "amount": "1"}, {"id": "x", "category": "Other", "amount": "2", "frequency": "Annual", "taxable": "True"}]
+    dm.save_csv(tmp_data / "mixed.csv", rows)
+    loaded = dm.load_csv(tmp_data / "mixed.csv")
+    assert loaded[0]["id"] == "" and loaded[1]["taxable"] == "True" and len(loaded) == 2

@@ -53,13 +53,11 @@ def layout():
                                     f"Pick any scenario to compare its key metrics against {BASELINE_DISPLAY_NAME}.",
                                     target="label-scenarios-compare",
                                 ),
-                                dcc.Dropdown(
+                                dbc.Select(
                                     id="scenarios-list-dropdown",
                                     options=[{"label": BASELINE_DISPLAY_NAME, "value": "Baseline"}],
                                     value="Baseline",
-                                    clearable=False,
                                     className="mb-3",
-                                    style={"color": "#0f172a"},
                                 ),
                                 html.Label(
                                     [html.I(className="bi bi-pencil-square me-1 text-muted"), "Scenario Name for Operation"],

@@ -3,7 +3,7 @@ from typing import Dict, Any, List
 from planner.engines.tax.federal import calculate_federal_tax
 from planner.engines.tax.north_carolina import calculate_nc_tax
 from planner.engines.valuation import get_ownership_fraction
-from planner.engines.records import taxable_income_by_category
+from planner.engines.records import taxable_income_by_category, business_deduction_totals
 
 def get_next_quarter(quarter_str: str) -> str:
     """
@@ -101,6 +101,13 @@ def run_forecast(
 
     forecast_rows = []
 
+    deductions = business_deduction_totals(business_profile)
+    profit_deductions_annual = deductions["profit"]
+    se_health_annual = deductions["health_insurance"]
+    if entity_type == "C Corporation":
+        profit_deductions_annual += se_health_annual
+        se_health_annual = 0.0
+
     # Personal profile and non-business income for tax calculations
     personal_income_base = taxable_income_by_category(personal_income_list)
         
@@ -180,14 +187,16 @@ def run_forecast(
             ownership_pct=ownership_pct,
             retirement_contributions=retirement_contributions,
             filing_status=filing_status,
-            rules=fed_rules
+            rules=fed_rules,
+            business_tax_deductions=profit_deductions_annual,
+            se_health_insurance=se_health_annual,
         )
         
         # Run NC State Tax Engine
         nc_tax_calc = calculate_nc_tax(
             federal_agi=fed_tax_calc["agi"],
             gross_cap_gains_and_div=personal_income_tax_run.get("Capital gains", 0.0) + personal_income_tax_run.get("Dividends", 0.0),
-            business_net_income=annual_net_biz_income,
+            business_net_income=annual_net_biz_income - profit_deductions_annual,
             business_entity=entity_type,
             filing_status=filing_status,
             rules=nc_rules

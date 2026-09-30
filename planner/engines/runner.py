@@ -11,7 +11,7 @@ from planner.engines.valuation import calculate_valuation, calculate_sensitivity
 from planner.engines.forecast import run_forecast, NUMERIC_COLS
 from planner.engines.cashflow import calculate_combined_cashflow
 from planner.engines.allocation import calculate_budget_allocation
-from planner.engines.records import annualize_records, taxable_income_by_category
+from planner.engines.records import annualize_records, taxable_income_by_category, business_deduction_totals
 
 
 def run_all_engines(
@@ -77,6 +77,16 @@ def run_all_engines(
 
     annual_net_biz_income = (ebitda_q - owner_w2_salary / 4.0) * 4.0
 
+    # Tax-only deductions from the Business page lower TAXABLE business profit only;
+    # cash flow, EBITDA and valuation keep using the book figure above.
+    deductions = business_deduction_totals(state["business"])
+    profit_deductions = deductions["profit"]
+    se_health_insurance = deductions["health_insurance"]
+    if entity_type == "C Corporation":
+        profit_deductions += se_health_insurance  # corporate-level deduction for a C-Corp
+        se_health_insurance = 0.0
+    taxable_biz_income = annual_net_biz_income - profit_deductions
+
     retirement = {
         "retirement_401k": float(state["profile"].get("retirement_401k", 0.0)),
         "retirement_ira": float(state["profile"].get("retirement_ira", 0.0)),
@@ -98,6 +108,8 @@ def run_all_engines(
         retirement_contributions=retirement,
         filing_status=filing_status,
         rules=fed_rules,
+        business_tax_deductions=profit_deductions,
+        se_health_insurance=se_health_insurance,
     )
 
     # ── NC State Tax ──────────────────────────────────────────────────────
@@ -107,7 +119,7 @@ def run_all_engines(
             personal_income_map.get("Capital gains", 0.0)
             + personal_income_map.get("Dividends", 0.0)
         ),
-        business_net_income=annual_net_biz_income,
+        business_net_income=taxable_biz_income,
         business_entity=entity_type,
         filing_status=filing_status,
         rules=nc_rules,
@@ -216,7 +228,9 @@ def run_all_engines(
         "nc_tax": nc_tax,
         "combined_tax": combined_tax,
         "business_attributable_tax": business_attributable_tax,
-        "effective_rate": fed_tax.get("combined_effective_tax_rate", 0.0),
+        # Total Federal + NC tax over AGI (the federal-only rate understated it).
+        "effective_rate": combined_tax / fed_tax["agi"] if fed_tax["agi"] > 0 else 0.0,
+        "business_tax_deductions": profit_deductions + se_health_insurance,
         # Cash Flow / Budget Allocation
         "cashflow": cashflow,
         "budget_allocation": budget_allocation,

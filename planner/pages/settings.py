@@ -33,7 +33,7 @@ def layout():
                                             id="label-tax-year", className="form-label",
                                         ),
                                         dbc.Tooltip("The tax year whose rules and brackets will be used for all calculations.", target="label-tax-year"),
-                                        dcc.Dropdown(
+                                        dbc.Select(
                                             id="settings-tax-year",
                                             options=[
                                                 {"label": "2024 Rules", "value": 2024},
@@ -41,9 +41,7 @@ def layout():
                                                 {"label": "2026 Rules", "value": 2026},
                                             ],
                                             value=2026,
-                                            clearable=False,
-                                            className="mb-3",
-                                            style={"color": "#0f172a"}
+                                            className="mb-3"
                                         ),
 
                                         html.Label(
@@ -51,13 +49,11 @@ def layout():
                                             id="label-state", className="form-label",
                                         ),
                                         dbc.Tooltip("State whose income tax rules will be applied. Currently supports North Carolina.", target="label-state"),
-                                        dcc.Dropdown(
+                                        dbc.Select(
                                             id="settings-state",
                                             options=[{"label": "North Carolina (NC)", "value": "NC"}],
                                             value="NC",
-                                            clearable=False,
-                                            className="mb-3",
-                                            style={"color": "#0f172a"}
+                                            className="mb-3"
                                         ),
 
                                         html.Label(
@@ -65,16 +61,14 @@ def layout():
                                             id="label-theme", className="form-label",
                                         ),
                                         dbc.Tooltip("Switch between dark and light interface themes.", target="label-theme"),
-                                        dcc.Dropdown(
+                                        dbc.Select(
                                             id="settings-theme",
                                             options=[
                                                 {"label": "Dark Mode (Slate)", "value": "dark"},
                                                 {"label": "Light Mode (Flatly)", "value": "light"}
                                             ],
                                             value="dark",
-                                            clearable=False,
-                                            className="mb-3",
-                                            style={"color": "#0f172a"}
+                                            className="mb-3"
                                         ),
 
                                         html.Div(

@@ -4,7 +4,7 @@ from dash import html, dcc, callback, Input, Output
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
-from planner.components.cards import render_metric_card
+from planner.components.cards import render_kpi_strip
 from planner.components.charts import (
     create_net_worth_trend, create_business_trend,
     create_allocation_chart, apply_dark_layout,
@@ -18,7 +18,7 @@ dash.register_page(__name__, path="/", title="Overview")
 def layout():
     return dbc.Container(
         [
-            dbc.Row(id="overview-cards-container", className="mb-4"),
+            html.Div(id="overview-cards-container", className="mb-4"),
             html.Div(id="overview-charts-container"),
         ],
         fluid=True,
@@ -36,20 +36,20 @@ def _render_charts_row(fig_nw, fig_biz, fig_alloc, explain, business_enabled):
             style={"height": "200px" if fig.layout.annotations else "360px"},
             config={"displaylogo": False, "displayModeBar": False, "responsive": True},
         ),
-        className="glass-card mb-4",
+        className="glass-card",
     )
 
     rows = [
         dbc.Row(
             [
-                dbc.Col(graph_card("overview-networth-chart", fig_nw), lg=7),
-                dbc.Col(graph_card("overview-allocation-chart", fig_alloc), lg=5),
+                dbc.Col(graph_card("overview-networth-chart", fig_nw), lg=7, className="mb-4"),
+                dbc.Col(graph_card("overview-allocation-chart", fig_alloc), lg=5, className="mb-4"),
             ]
         ),
     ]
     if business_enabled:
         rows.append(
-            dbc.Row(dbc.Col(graph_card("overview-business-chart", fig_biz), lg=12, className="business-only"))
+            dbc.Row(dbc.Col(graph_card("overview-business-chart", fig_biz), lg=12, className="business-only mb-4"))
         )
     rows.append(
         dbc.Row(dbc.Col(html.Div(id="overview-explain-container", children=explain), lg=12))
@@ -102,47 +102,36 @@ def update_overview(state, explain_target, business_mode_enabled):
         if business_enabled
         else f"{r['effective_rate'] * 100:.1f}% effective"
     )
-    # Column spans so the row always fills evenly: with a business, the headline card
-    # takes a third of the row and four cards share the rest; without, three equal cards.
-    other_lg, other_xl = (3, 2) if business_enabled else (4, 4)
-    cards = []
+    items = [
+        {
+            "title": "Combined Net Worth" if business_enabled else "Net Worth",
+            "value": f"${r['combined_net_worth']:,.0f}" if business_enabled else f"${nw_result['value']:,.0f}",
+            "subtitle": (f"Personal + ${r['business_equity_value']:,.0f} equity stake" if business_enabled
+                         else f"Assets: ${nw_result['total_assets']:,.0f}"),
+            "color_class": "emerald",
+            "explain_target": "combined_net_worth" if business_enabled else "net_worth",
+            "primary": True,
+        },
+        {
+            "title": "Combined Tax", "value": f"${r['combined_tax']:,.0f}", "subtitle": combined_tax_subtitle,
+            "color_class": "purple", "explain_target": "combined_tax",
+        },
+    ]
     if business_enabled:
-        cards.append(render_metric_card(
-            "Combined Net Worth",
-            f"${r['combined_net_worth']:,.0f}",
-            f"Personal + {r['business_equity_value']:,.0f} equity stake",
-            "emerald", "combined_net_worth",
-            primary=True, xl=4,
-        ))
-    cards.append(render_metric_card(
-        "Combined Tax",
-        f"${r['combined_tax']:,.0f}",
-        combined_tax_subtitle,
-        "purple", "combined_tax",
-        lg=other_lg, xl=other_xl,
-    ))
-    cards.append(render_metric_card(
-        "Personal Net Worth",
-        f"${nw_result['value']:,.0f}",
-        f"Assets: ${nw_result['total_assets']:,.0f}",
-        "", "net_worth",
-        lg=other_lg, xl=other_xl,
-    ))
-    if business_enabled:
-        cards.append(render_metric_card(
-            "Business Value",
-            f"${val_result['value']:,.0f}",
-            f"EBITDA × {multiples.get('ebitda', 6.0)}",
-            "emerald", "business_value",
-            lg=other_lg, xl=other_xl,
-        ))
-    cards.append(render_metric_card(
-        "Cash Available",
-        f"${float(recent_q['Cash']):,.0f}",
-        f"End of {recent_q['Quarter']}",
-        "", "cash_available",
-        lg=other_lg, xl=other_xl,
-    ))
+        items.append({
+            "title": "Personal Net Worth", "value": f"${nw_result['value']:,.0f}",
+            "subtitle": f"Assets: ${nw_result['total_assets']:,.0f}", "explain_target": "net_worth",
+        })
+        items.append({
+            "title": "Business Value", "value": f"${val_result['value']:,.0f}",
+            "subtitle": f"EBITDA \u00d7 {multiples.get('ebitda', 6.0)}", "color_class": "emerald",
+            "explain_target": "business_value", "business_only": True,
+        })
+    items.append({
+        "title": "Cash Available", "value": f"${float(recent_q['Cash']):,.0f}",
+        "subtitle": f"End of {recent_q['Quarter']}", "explain_target": "cash_available",
+    })
+    cards = [render_kpi_strip(items)]
 
     fig_nw = create_net_worth_trend(nw_proj_df)
     fig_biz = create_business_trend(forecast_df)
