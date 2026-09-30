@@ -25,6 +25,8 @@ def layout():
     )
 
 
+
+
 def _render_charts_row(fig_nw, fig_biz, fig_alloc, explain, business_enabled):
     """Row 1: net worth projection + asset allocation. Row 2 (business only): the
     business trend, full width. Last row: the calculation-audit panel, full width,
@@ -191,3 +193,20 @@ def update_overview(state, explain_target, business_mode_enabled):
     explain = panels.get(target, render_empty_explain_panel())
 
     return cards, _render_charts_row(fig_nw, fig_biz, fig_alloc, explain, business_enabled)
+
+
+@callback(
+    Output("explain-target-store", "data"),
+    Input({"type": "explain-trigger", "target": dash.ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def handle_explain_click(n_clicks):
+    from dash import callback_context
+    import json
+    ctx = callback_context
+    if not ctx.triggered or not any(n_clicks or []):
+        return no_update
+    prop_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    target = json.loads(prop_id).get("target")
+    return target or no_update
+
