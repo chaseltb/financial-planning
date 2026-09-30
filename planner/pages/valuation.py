@@ -6,11 +6,11 @@ from dash import html, dcc, callback, callback_context, Input, Output, State, AL
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
-from planner.components.cards import render_metric_card, render_chip_row
-from planner.components.charts import create_sensitivity_chart, apply_dark_layout
+from planner.components.cards import render_chip_row
+from planner.components.charts import create_sensitivity_chart, apply_dark_layout, add_empty_note
 from planner.components.business_gate import render_business_gate, register_business_gate
 from planner.engines.runner import run_all_engines
-from planner.data_manager import save_or_mark_unsaved
+from planner.data_manager import save_or_mark_unsaved, states_equal
 
 dash.register_page(__name__, path="/valuation", title="Valuation")
 
@@ -25,7 +25,7 @@ def layout():
                 [
                     html.Div("OUR BEST ESTIMATE (EBITDA MULTIPLE)", className="text-muted",
                              style={"fontSize": "0.8rem", "letterSpacing": "0.05em", "fontWeight": "600"}),
-                    html.H1(id="valuation-headline-value", style={"fontWeight": "800", "marginBottom": "4px"}),
+                    html.Div(id="valuation-headline-value", className="display-5", style={"fontWeight": "800", "marginBottom": "4px", "fontFamily": "var(--font-heading)"}),
                     html.Div(id="valuation-headline-range", className="text-muted", style={"fontSize": "0.9rem"}),
                 ],
                 className="glass-card mb-4",
@@ -150,7 +150,7 @@ def layout():
                                             dbc.Col(
                                                 [
                                                     html.Label("Base Method"),
-                                                    dcc.Dropdown(
+                                                    dbc.Select(
                                                         id="valuation-sensitivity-method",
                                                         options=[
                                                             {"label": "Revenue Multiple",    "value": "Revenue Multiple"},
@@ -160,9 +160,7 @@ def layout():
                                                             {"label": "FCF Multiple",        "value": "FCF Multiple"},
                                                         ],
                                                         value="EBITDA Multiple",
-                                                        clearable=False,
                                                         className="mb-3",
-                                                        style={"color": "#0f172a"},
                                                     ),
                                                 ],
                                                 width=6,
@@ -265,6 +263,8 @@ def populate_valuation_page(state, stored_method, stored_range, dropdown_method,
     )])
     fig_comp = apply_dark_layout(fig_comp, "Valuation Methodology Comparison")
     fig_comp.update_yaxes(title_text="Estimated Value ($)")
+    if not any(float(v or 0) != 0 for v in val["valuations"].values()):
+        add_empty_note(fig_comp, "No business earnings to value yet.<br>Enter revenue and expenses on the Business page.")
 
     fig_sens = create_sensitivity_chart(sens["sensitivity_curve"], sens_method)
 
@@ -322,6 +322,11 @@ def persist_valuation_edits(val_vals, val_ids, current_state, active_scenario, a
             except ValueError:
                 val = 0.0
             new_state["assumptions"]["custom_valuation_multiplier"] = val
+
+    # Populating inputs on page load fires these callbacks with unchanged values;
+    # don't rewrite the data files (or reformat them) when nothing actually changed.
+    if states_equal(new_state, current_state):
+        return no_update, no_update
 
     label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
     return new_state, label

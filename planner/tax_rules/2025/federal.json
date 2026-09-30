@@ -1,8 +1,8 @@
 {
   "tax_year": 2025,
   "standard_deduction": {
-    "single": 15000.0,
-    "married": 30000.0
+    "single": 15750.0,
+    "married": 31500.0
   },
   "brackets": {
     "single": [
@@ -28,6 +28,9 @@
     "single": {"0pct_top": 48350.0, "15pct_top": 533400.0},
     "married": {"0pct_top": 96700.0, "15pct_top": 600050.0}
   },
+  "retirement_limits": {"401k": 23500.0, "401k_catchup": 7500.0, "ira": 7000.0, "hsa_family": 8550.0, "solo": 70000.0},
+  "qbi_threshold": {"single": 197300.0, "married": 394600.0},
+  "qbi_phase_range": {"single": 50000.0, "married": 100000.0},
   "corporate_rate": 0.21,
   "additional_medicare_threshold": {
     "single": 200000.0,

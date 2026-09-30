@@ -1,5 +1,5 @@
 """Collapsible "where these numbers come from" panel."""
-from dash import html, dcc
+from dash import html
 import dash_bootstrap_components as dbc
 
 # (label, value shown, source, year)

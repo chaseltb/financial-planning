@@ -46,7 +46,7 @@ def calculate_payroll_tax(wages: float, filing_status: str, rules: Dict[str, Any
         "trace": {
             "formula": "Total Payroll Tax = Social Security + Medicare + Additional Medicare",
             "inputs": {"wages": wages, "filing_status": filing_status},
-            "assumptions_used": f"Filing status standard thresholds applied.",
+            "assumptions_used": "Filing status standard thresholds applied.",
             "rules_referenced": f"2026 SS Cap: ${ss_limit:,.2f}, SS Rate: {ss_rate*100}%, Med Rate: {med_rate*100}%, Add Med Rate: {add_med_rate*100}% over ${add_med_threshold:,.2f}",
             "steps": steps
         }
@@ -76,6 +76,9 @@ def calculate_self_employment_tax(
     se_factor = 0.9235
     # A net loss produces zero SE tax and zero deduction — SE tax is never negative.
     se_earnings = max(0.0, net_earnings) * se_factor
+    # Net SE earnings under $400 are exempt from SE tax entirely (IRC 1402(b)(2)).
+    if se_earnings < 400.0:
+        se_earnings = 0.0
 
     ss_rate = rules.get("social_security_rate", 0.062) * 2  # 12.4%
     ss_limit = rules.get("social_security_limit", 184500.0)
@@ -104,7 +107,9 @@ def calculate_self_employment_tax(
     add_med_tax = add_med_taxable * add_med_rate
 
     total_se_tax = ss_tax + med_tax + add_med_tax
-    deductible_se_tax = total_se_tax * 0.5
+    # Only half of the OASDI + regular Medicare portion is deductible; the 0.9%
+    # Additional Medicare Tax is not (Form 8959 / Schedule SE line 13).
+    deductible_se_tax = (ss_tax + med_tax) * 0.5
 
     steps = [
         f"Net Self-Employment Earnings: Net Profit (${net_earnings:,.2f}) * 92.35% = ${se_earnings:,.2f}",
@@ -121,7 +126,7 @@ def calculate_self_employment_tax(
             f"Additional Medicare Tax: Combined wages/SE earnings do not exceed ${add_med_threshold:,.2f} threshold (no additional tax)"
         )
     steps.append(
-        f"Deductible SE Tax (for AGI adjustment): 50% of Total SE Tax (${total_se_tax:,.2f}) = ${deductible_se_tax:,.2f}"
+        f"Deductible SE Tax (for AGI adjustment): 50% of Social Security + Medicare SE Tax (${ss_tax + med_tax:,.2f}; Additional Medicare is not deductible) = ${deductible_se_tax:,.2f}"
     )
 
     return {

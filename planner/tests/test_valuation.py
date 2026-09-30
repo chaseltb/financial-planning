@@ -1,4 +1,3 @@
-import pytest
 from planner.engines.valuation import calculate_valuation, calculate_sensitivity
 
 def test_valuation():

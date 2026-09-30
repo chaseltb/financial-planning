@@ -6,6 +6,7 @@ tip says so explicitly.
 from typing import Any, Dict, List
 
 from planner.engines.tax.federal import calculate_bracket_tax
+from planner.engines.records import annualize_records
 
 # Contribution limits by tax year. 2026 figures are IRS-announced amounts;
 # treat them as best-known estimates, not authoritative for years not yet finalized.
@@ -33,7 +34,8 @@ _IRA_DEDUCTION_PHASEOUT = {
 _QBI_PHASEIN = {
     2024: {"single": (191950.0, 241950.0), "married": (383900.0, 483900.0)},
     2025: {"single": (197300.0, 247300.0), "married": (394600.0, 494600.0)},
-    2026: {"single": (201850.0, 251850.0), "married": (403550.0, 503550.0)},
+    # OBBBA widened the phase-in range to $75k single / $150k married starting 2026.
+    2026: {"single": (201750.0, 276750.0), "married": (403500.0, 553500.0)},
 }
 
 _PASS_THROUGH_ENTITIES = ("Sole Proprietorship", "Single-member LLC", "Multi-member LLC")
@@ -63,7 +65,7 @@ def generate_tax_tips(state: Dict[str, Any], r: Dict[str, Any]) -> List[Dict[str
 
     profile = state.get("profile", {})
     business = state.get("business", {})
-    income = state.get("income", [])
+    income = annualize_records(state.get("income", []))
     liabilities = state.get("liabilities", [])
 
     fed = r["fed_tax"]
@@ -117,9 +119,9 @@ def generate_tax_tips(state: Dict[str, Any], r: Dict[str, Any]) -> List[Dict[str
     ira_extra = ""
     if agi >= phaseout_hi:
         ira_extra = (
-            f" Note: at your AGI, a traditional IRA contribution is likely NOT deductible if you (or a "
-            f"spouse) are covered by a workplace retirement plan — a non-deductible traditional "
-            f"contribution converted to Roth (\"backdoor Roth\") may be a better route in that case."
+            " Note: at your AGI, a traditional IRA contribution is likely NOT deductible if you (or a "
+            "spouse) are covered by a workplace retirement plan — a non-deductible traditional "
+            "contribution converted to Roth (\"backdoor Roth\") may be a better route in that case."
         )
     elif agi >= phaseout_lo:
         ira_extra = (
@@ -144,7 +146,15 @@ def generate_tax_tips(state: Dict[str, Any], r: Dict[str, Any]) -> List[Dict[str
         r.get("owner_w2_salary", 0.0) if entity_type == "S Corporation" else annual_net_biz_income
     )
     if entity_type in _PASS_THROUGH_ENTITIES + ("S Corporation",) and solo_contribution_base > 0:
-        solo_limit = min(limits["solo"], max(0.0, solo_contribution_base) * 0.25)
+        # Earned income for plan purposes: W-2 wages (S-Corp) or net profit less half of SE tax
+        # (sole prop / partnership). Employer profit-sharing is 25% of W-2 pay for an S-Corp but an
+        # effective 20% of net earnings for a self-employed owner; the employee deferral comes on top,
+        # shared with any 401(k) already used at a day job.
+        is_s_corp = entity_type == "S Corporation"
+        earned = solo_contribution_base if is_s_corp else max(0.0, solo_contribution_base - fed.get("se_tax", 0.0) / 2.0)
+        employer_part = earned * (0.25 if is_s_corp else 0.20)
+        deferral_room = max(0.0, limits["401k"] - float(profile.get("retirement_401k", 0.0) or 0.0))
+        solo_limit = min(limits["solo"], min(deferral_room, earned) + employer_part)
         current_solo = float(profile.get("solo_401k", 0.0) or 0.0)
         headroom = solo_limit - current_solo
         if headroom > 500:
@@ -155,7 +165,8 @@ def generate_tax_tips(state: Dict[str, Any], r: Dict[str, Any]) -> List[Dict[str
                 "body": (
                     f"Based on your {'W-2 wages from the business' if entity_type == 'S Corporation' else 'net self-employment income'}, "
                     f"a Solo 401(k) or SEP IRA could shelter up to ~${solo_limit:,.0f} this year "
-                    f"(roughly 25% of that base, capped at ${limits['solo']:,.0f}); you're using "
+                    f"(an employee deferral of up to your earnings, shared with any 401(k) at another job, plus a "
+                    f"{'25% of W-2 pay' if is_s_corp else '20% of net earnings'} employer contribution, capped at ${limits['solo']:,.0f}); you're using "
                     f"${current_solo:,.0f}. A Solo 401(k) usually "
                     f"beats a SEP IRA at the same income because it also allows an employee-deferral "
                     f"portion on top of the profit-sharing amount. The unused ${headroom:,.0f} of "

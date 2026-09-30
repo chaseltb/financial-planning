@@ -1,4 +1,3 @@
-import pytest
 from planner.engines.cashflow import calculate_combined_cashflow
 
 
@@ -83,3 +82,13 @@ def test_combined_cashflow_uses_value_fallback_when_no_combined_tax():
     )
 
     assert res["breakdown"]["outflows"]["Taxes"] == 4000.0
+
+
+def test_business_cash_inflow_counts_as_income():
+    res = calculate_combined_cashflow(
+        personal_income=[], personal_expenses=[], liabilities=[],
+        retirement_contributions={}, tax_result={"combined_tax": 1000.0},
+        business_cash_inflow=50000.0,
+    )
+    assert res["total_inflows"] == 50000.0
+    assert res["value"] == 49000.0

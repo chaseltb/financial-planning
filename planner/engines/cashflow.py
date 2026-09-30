@@ -1,15 +1,20 @@
 from typing import Dict, Any, List
+from planner.engines.records import annualize_records
 
 def calculate_combined_cashflow(
     personal_income: List[Dict[str, Any]],
     personal_expenses: List[Dict[str, Any]],
     liabilities: List[Dict[str, Any]],
     retirement_contributions: Dict[str, float],
-    tax_result: Dict[str, Any]
+    tax_result: Dict[str, Any],
+    business_cash_inflow: float = 0.0,
 ) -> Dict[str, Any]:
     """
     Computes annualized personal inflows, outflows, and net cash flow.
     """
+    personal_income = annualize_records(personal_income)
+    personal_expenses = annualize_records(personal_expenses)
+
     # Inflows
     w2 = 0.0
     consulting_1099 = 0.0
@@ -34,7 +39,10 @@ def calculate_combined_cashflow(
         else:
             other_inflow += amt
             
-    total_inflows = w2 + consulting_1099 + dividends + interest + rental + other_inflow
+    # Owner salary + distributions actually received from the business. Without
+    # this, business owners were charged tax on business profit but never credited
+    # with the cash it produced.
+    total_inflows = w2 + consulting_1099 + dividends + interest + rental + other_inflow + business_cash_inflow
     
     # Outflows
     housing = 0.0
@@ -68,8 +76,8 @@ def calculate_combined_cashflow(
     net_cash_flow = total_inflows - total_outflows
     
     steps = [
-        f"1. Cash Inflows: W-2 (${w2:,.2f}) + 1099 (${consulting_1099:,.2f}) + Dividends/Interest (${dividends+interest:,.2f}) + Rental (${rental:,.2f}) + Other (${other_inflow:,.2f}) = ${total_inflows:,.2f}",
-        f"2. Cash Outflows:",
+        f"1. Cash Inflows: W-2 (${w2:,.2f}) + 1099 (${consulting_1099:,.2f}) + Dividends/Interest (${dividends+interest:,.2f}) + Rental (${rental:,.2f}) + Other (${other_inflow:,.2f}) + Business pay/distributions (${business_cash_inflow:,.2f}) = ${total_inflows:,.2f}",
+        "2. Cash Outflows:",
         f"   - Housing expenses: ${housing:,.2f}",
         f"   - Other personal expenses: ${other_expenses:,.2f}",
         f"   - Non-housing debt service (annualized): ${debt_service:,.2f}",
@@ -90,7 +98,8 @@ def calculate_combined_cashflow(
                 "Dividends": dividends,
                 "Interest": interest,
                 "Rental Income": rental,
-                "Other": other_inflow
+                "Other": other_inflow,
+                "Business Pay & Distributions": business_cash_inflow
             },
             "outflows": {
                 "Housing": housing,

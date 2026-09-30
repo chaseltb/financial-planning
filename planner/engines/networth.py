@@ -90,6 +90,7 @@ def project_net_worth(
     liabilities: List[Dict[str, Any]],
     quarters: int = 8,
     quarterly_allocation: Dict[str, float] = None,
+    quarterly_retirement_contribution: float = 0.0,
 ) -> List[Dict[str, Any]]:
     """
     Projects Net Worth forward quarterly based on annual asset growth rates and
@@ -105,6 +106,8 @@ def project_net_worth(
     savings_alloc = max(0.0, float(quarterly_allocation.get("Savings", 0.0)))
     brokerage_alloc = max(0.0, float(quarterly_allocation.get("Taxable Brokerage", 0.0)))
     liability_paydown_alloc = max(0.0, float(quarterly_allocation.get("Liability Paydown", 0.0)))
+
+    retirement_contrib = max(0.0, float(quarterly_retirement_contribution))
 
     projection = []
 
@@ -123,6 +126,11 @@ def project_net_worth(
     savings_bucket = _find_or_create_bucket("cash", "Cash", 0.02) if savings_alloc > 0 else None
     brokerage_bucket = _find_or_create_bucket("brokerage", "Brokerage", 0.07) if brokerage_alloc > 0 else None
 
+    # Employee retirement contributions (401k/IRA/HSA/Roth/solo/SEP) are savings, not
+    # spending: they leave cash flow but must land in a retirement asset so net worth
+    # isn't understated. Employer match isn't modeled.
+    retirement_bucket = _find_or_create_bucket("retirement", "Retirement", 0.07) if retirement_contrib > 0 else None
+
     # Calculate initial net worth
     nw_calc = calculate_net_worth(current_assets, current_liabilities)
     projection.append({
@@ -140,6 +148,8 @@ def project_net_worth(
 
         # Contribute this quarter's allocated savings/brokerage split (after
         # growth, so a fresh contribution doesn't earn a partial quarter of return).
+        if retirement_bucket is not None:
+            retirement_bucket["value"] = float(retirement_bucket["value"]) + retirement_contrib
         if savings_bucket is not None:
             savings_bucket["value"] = float(savings_bucket["value"]) + savings_alloc
         if brokerage_bucket is not None:

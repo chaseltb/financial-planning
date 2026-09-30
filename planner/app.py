@@ -1,7 +1,6 @@
 """Main Dash application: entry point, layout, and globally-persistent callbacks."""
 import dash
 from dash import html, dcc, Input, Output, State, callback_context
-import dash_bootstrap_components as dbc
 
 from planner.data_manager import load_project_state, get_scenarios_list
 from planner.config import BASELINE_DISPLAY_NAME
@@ -11,15 +10,39 @@ from planner.components.header import render_header
 app = dash.Dash(
     __name__,
     use_pages=True,
+    # Theme and icon CSS are bundled under assets/vendor so the app makes no external
+    # network requests (they are loaded here, in order, and skipped by auto-discovery).
     external_stylesheets=[
-        dbc.themes.SLATE, 
-        "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        "/assets/vendor/bootstrap-slate.min.css",
+        "/assets/vendor/bootstrap-icons/bootstrap-icons.min.css",
     ],
+    assets_ignore=r".*\.min\.css",  # skip the vendored *.min.css files
     # Some page tables are built inside callbacks rather than the initial layout.
     suppress_callback_exceptions=True,
     update_title=None,
 )
 app.title = "Personal & Business Financial Planner"
+
+# Custom index: document language, description, and an SVG favicon.
+app.index_string = """<!DOCTYPE html>
+<html lang="en">
+    <head>
+        {%metas%}
+        <meta name="description" content="Local, private personal and small-business financial planner.">
+        <meta name="color-scheme" content="dark light">
+        <title>{%title%}</title>
+        <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+        {%css%}
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>"""
 
 # All persistent IDs live here, not in individual pages.
 app.layout = html.Div(
@@ -45,6 +68,7 @@ app.layout = html.Div(
         dcc.Store(id="mobile-nav-open-store", data=False),
         html.Div(id="theme-applier", style={"display": "none"}),
 
+        html.A("Skip to main content", href="#main-content", className="skip-link"),
         render_sidebar(),
         # Sibling of the sidebar, not nested: the sidebar's CSS `transform` creates a
         # containing block that would break a nested `position: fixed` child.
@@ -52,7 +76,8 @@ app.layout = html.Div(
         html.Div(
             [
                 render_header(),          # header-scenario-dropdown, save-status-indicator
-                dash.page_container,      # page content swapped here on navigation
+                # <main> landmark; tabIndex=-1 lets the skip link move focus here.
+                html.Main(dash.page_container, id="main-content", tabIndex=-1),
             ],
             className="main-content",
         ),

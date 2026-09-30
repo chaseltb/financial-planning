@@ -133,3 +133,16 @@ def test_manual_override_carries_forward_growth_from_overridden_value():
     assert only_df.loc["2026-Q2", "Revenue"] == 10000.0
     assert only_df.loc["2026-Q3", "Revenue"] == pytest.approx(10000.0 * 1.10)
     assert only_df.loc["2026-Q4", "Revenue"] == pytest.approx(10000.0 * 1.10 * 1.10)
+
+
+def test_co_owner_share_is_paid_out_of_company_cash():
+    from planner.engines.forecast import run_forecast
+    import pandas as pd
+    hist = pd.DataFrame([{"Quarter": "2025-Q4", "Revenue": 1000.0, "COGS": 0.0, "Payroll": 0.0, "Expenses": 0.0,
+                          "Capital expenditures": 0.0, "Owner salary": 0.0, "Distributions": 0.0,
+                          "Tax estimate": 0.0, "Cash": 0.0, "EBITDA": 1000.0, "Business value": 0.0}])
+    res = run_forecast(hist, {"entity_type": "Multi-member LLC", "ownership_pct": 50.0, "revenue_growth": 0.0,
+                              "expense_growth": 0.0}, {"filing_status": "single"}, [], {}, {}, {}, horizon=1)
+    row = res["only_forecast_df"].iloc[0]
+    assert row["Distributions"] == pytest.approx(500.0)
+    assert row["Cash"] == pytest.approx(0.0)  # both partners' shares leave the company

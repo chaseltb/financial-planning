@@ -2,18 +2,39 @@ import os
 import json
 import csv
 import copy
+import shutil
 import logging
 import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List
-import pandas as pd
 from dash import html
 
 from planner.config import DATA_DIR, TAX_RULES_DIR, SCENARIOS_DIR, DEFAULT_TAX_YEAR, DEFAULT_STATE
 
 logger = logging.getLogger(__name__)
+
+SEED_DIR = Path(__file__).resolve().parent / "seed_data"
+
+
+def ensure_seed_data():
+    """Copies the sample starter data (median NC figures and example scenarios) into
+    planner/data/ for any file that doesn't exist yet. planner/data/ itself is
+    git-ignored, so a fresh clone starts from these samples while a user's own
+    edits are never overwritten or committed."""
+    if not SEED_DIR.exists():
+        return
+    for src in SEED_DIR.rglob("*"):
+        if src.is_dir():
+            continue
+        dest = DATA_DIR / src.relative_to(SEED_DIR)
+        if not dest.exists():
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src, dest)
+
+
+ensure_seed_data()
 
 # On Windows, os.replace onto an existing file can transiently raise
 # "[WinError 5] Access is denied" (a PermissionError) when antivirus, the
@@ -77,10 +98,17 @@ def save_csv(path: Path, items: List[Dict[str, Any]], fieldnames: List[str] = No
     if not items and not fieldnames:
         return
     if not fieldnames and items:
-        fieldnames = list(items[0].keys())
+        # Union of every row's keys (first-seen order). Taking only the first row's keys
+        # made saving fail whenever a later row had extra columns (e.g. id/frequency/taxable
+        # on rows from a scenario whose first row lacked them).
+        fieldnames = []
+        for item in items:
+            for key in item:
+                if key not in fieldnames:
+                    fieldnames.append(key)
 
     def _write(f):
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=fieldnames, restval="")
         writer.writeheader()
         for item in items:
             writer.writerow(item)
@@ -209,6 +237,33 @@ def save_project_state(state: Dict[str, Any], active_scenario: str = "Baseline")
             "changes": diffs
         }
         save_scenario(active_scenario, scenario)
+
+def _as_number(value):
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return None
+    return None
+
+
+def states_equal(a: Any, b: Any) -> bool:
+    """Deep equality that treats numbers and numeric strings alike (CSV loads give
+    "0.0" where the UI stores 0.0), so a callback that only re-types values on page
+    load isn't mistaken for a real edit."""
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(states_equal(a[k], b[k]) for k in a)
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(states_equal(x, y) for x, y in zip(a, b))
+    na, nb = _as_number(a), _as_number(b)
+    if na is not None and nb is not None:
+        return abs(na - nb) < 1e-9
+    return a == b
+
 
 def _save_status_span(icon: str, text: str, color: str):
     return html.Span(

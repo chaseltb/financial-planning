@@ -94,6 +94,8 @@ def calculate_federal_tax(
     rules: Dict[str, Any],
     owner_w2_salary: float = 0.0,
     ownership_pct: float = 1.0,
+    business_tax_deductions: float = 0.0,
+    se_health_insurance: float = 0.0,
 ) -> Dict[str, Any]:
     """
     Calculates Federal Income Taxes for Personal and Business combined.
@@ -117,12 +119,21 @@ def calculate_federal_tax(
     se_deduction = 0.0
     qbi_qualified_income = 0.0
     corporate_tax = 0.0
-    business_to_personal_w2 = 0.0
     business_to_personal_distributions = 0.0
 
     entity = business_entity.strip()
 
     business_steps = []
+
+    # Tax-only business deductions (home office, vehicle, depreciation/Section 179, other) reduce
+    # the business's taxable profit — and therefore income tax, SE tax, and QBI — without changing
+    # its cash flow. Health insurance is handled below as an AGI adjustment instead.
+    if business_tax_deductions > 0:
+        business_net_income -= business_tax_deductions
+        business_steps.append(
+            f"Business tax deductions (home office, vehicle, depreciation, other): "
+            f"${business_tax_deductions:,.2f} subtracted from business profit -> taxable business profit ${business_net_income:,.2f}."
+        )
 
     # Employer FICA match on owner W-2 wages reduces profit available for K-1/corporate tax.
     employer_payroll_tax = 0.0
@@ -225,17 +236,40 @@ def calculate_federal_tax(
     gross_income = gross_ordinary + gross_cap_gains
     
     # 4. Retirement Deductions (reduces ordinary income)
+    # Each deduction is capped at the IRS annual limit for the tax year (when the
+    # rules file provides limits) so an over-limit entry can't create a deduction
+    # the tax code wouldn't allow. 401(k) allows for catch-up; HSA uses the family
+    # limit and solo/SEP is also capped at net self-employment earnings, since
+    # coverage tier and age aren't tracked.
+    limits = rules.get("retirement_limits", {})
+    def _cap(amount: float, limit: float = None) -> float:
+        amount = max(0.0, amount)
+        return amount if limit is None else min(amount, limit)
+    se_earned = max(0.0, (owner_share_net_income if entity in ("Sole Proprietorship", "Single-member LLC", "Multi-member LLC") else 0.0) + consulting_1099)
+    if entity == "S Corporation":
+        se_earned = owner_w2_salary
+    k401_cap = (limits["401k"] + limits.get("401k_catchup", 0.0)) if "401k" in limits else None
+    self_emp_cap = min(limits.get("solo", float("inf")), se_earned)
+    solo_ded = _cap(retirement_contributions.get("solo_401k", 0.0), self_emp_cap)
+    sep_ded = _cap(retirement_contributions.get("sep_ira", 0.0), self_emp_cap)
     total_retirement_deductions = sum([
-        retirement_contributions.get("retirement_401k", 0.0),
-        retirement_contributions.get("retirement_ira", 0.0),
-        retirement_contributions.get("retirement_hsa", 0.0),
-        retirement_contributions.get("solo_401k", 0.0),
-        retirement_contributions.get("sep_ira", 0.0),
+        _cap(retirement_contributions.get("retirement_401k", 0.0), k401_cap),
+        _cap(retirement_contributions.get("retirement_ira", 0.0), limits.get("ira")),
+        _cap(retirement_contributions.get("retirement_hsa", 0.0), limits.get("hsa_family")),
+        solo_ded,
+        sep_ded,
     ])
     
+    # Self-employed health insurance: deductible above the line, limited to net profit from the
+    # business (after the SE-tax deduction). Not available for a C-Corp owner (that would be a
+    # corporate deduction, which callers fold into business_tax_deductions instead).
+    se_health_ded = 0.0
+    if se_health_insurance > 0 and entity in ("Sole Proprietorship", "Single-member LLC", "Multi-member LLC", "S Corporation"):
+        se_health_ded = min(se_health_insurance, max(0.0, owner_share_net_income - total_se_deduction))
+
     # 5. Adjusted Gross Income (AGI)
-    # AGI = Gross Ordinary + Gross Cap Gains - Retirement Deductions - SE Tax Deduction
-    agi = max(0.0, gross_income - total_retirement_deductions - total_se_deduction)
+    # AGI = Gross Ordinary + Gross Cap Gains - Retirement Deductions - SE Tax Deduction - SE Health Insurance
+    agi = max(0.0, gross_income - total_retirement_deductions - total_se_deduction - se_health_ded)
     
     # 6. Deductions (Standard Deduction)
     std_deduction_dict = rules.get("standard_deduction", {"single": 16100.0, "married": 32200.0})
@@ -244,10 +278,28 @@ def calculate_federal_tax(
     # 7. QBI Deduction (20% of qualified business income)
     # Basic QBI is limited to 20% of (taxable ordinary income - net capital gains)
     qbi_deduction = 0.0
+    # QBI is net of the deductible half of SE tax and self-employed retirement
+    # contributions (Treas. Reg. 1.199A-3(b)(1)(vi)).
+    qbi_base = qbi_qualified_income
     if qbi_qualified_income > 0:
-        qbi_deduction = qbi_qualified_income * 0.20
+        qbi_base = max(0.0, qbi_qualified_income - total_se_deduction
+                       - solo_ded - sep_ded - se_health_ded)
+        qbi_deduction = qbi_base * 0.20
+        # Above the taxable-income threshold the deduction is limited to 50% of the
+        # W-2 wages the business pays (phased in across the phase range). This treats
+        # the business as NOT a specified service trade (SSTB); for an SSTB the
+        # deduction would phase out to zero instead. UBIA (property) isn't modeled.
+        qbi_thresholds = rules.get("qbi_threshold", {})
+        thr = qbi_thresholds.get(filing_status.lower())
+        if thr is not None:
+            phase_range = rules.get("qbi_phase_range", {}).get(filing_status.lower(), 50000.0)
+            taxable_before_qbi = max(0.0, agi - std_deduction)
+            if taxable_before_qbi > thr:
+                wage_limit = 0.5 * owner_w2_salary
+                phase_frac = min(1.0, (taxable_before_qbi - thr) / phase_range)
+                qbi_deduction -= phase_frac * max(0.0, qbi_deduction - wage_limit)
         # QBI deduction cannot exceed 20% of taxable ordinary income minus net capital gains
-        limit = max(0.0, (gross_ordinary - total_retirement_deductions - total_se_deduction - std_deduction) * 0.20)
+        limit = max(0.0, (gross_ordinary - total_retirement_deductions - total_se_deduction - se_health_ded - std_deduction) * 0.20)
         qbi_deduction = min(qbi_deduction, limit)
         
     total_deductions = std_deduction + qbi_deduction
@@ -296,14 +348,15 @@ def calculate_federal_tax(
         f"Total Gross Income: Ordinary (${gross_ordinary:,.2f}) + Capital Gains (${gross_cap_gains:,.2f}) = ${gross_income:,.2f}",
         f"Retirement Deductions: Pre-tax Contributions = ${total_retirement_deductions:,.2f}",
         f"Self-Employment Tax Deduction: 50% of SE Tax = ${total_se_deduction:,.2f}",
-        f"Adjusted Gross Income (AGI): Gross Income (${gross_income:,.2f}) - Retirement (${total_retirement_deductions:,.2f}) - SE Deduction (${total_se_deduction:,.2f}) = ${agi:,.2f}",
+        *([f"Self-Employed Health Insurance Deduction: ${se_health_ded:,.2f} (limited to business profit after the SE-tax deduction)"] if se_health_ded > 0 else []),
+        f"Adjusted Gross Income (AGI): Gross Income (${gross_income:,.2f}) - Retirement (${total_retirement_deductions:,.2f}) - SE Deduction (${total_se_deduction:,.2f})" + (f" - SE Health Insurance (${se_health_ded:,.2f})" if se_health_ded > 0 else "") + f" = ${agi:,.2f}",
         f"Standard Deduction: ${std_deduction:,.2f} ({filing_status.capitalize()})",
     ]
 
     if qbi_deduction > 0:
-        steps.append(f"QBI Pass-through Deduction: 20% of eligible QBI (${qbi_qualified_income:,.2f}) = ${qbi_deduction:,.2f}")
+        steps.append(f"QBI Pass-through Deduction: 20% of eligible QBI (${qbi_base:,.2f}, after SE-tax and self-employed retirement adjustments), capped at 20% of taxable income before QBI => deduction ${qbi_deduction:,.2f}. (Above the income threshold the deduction is limited by 50% of business W-2 wages; SSTB phase-out and property basis are not modeled.)")
     else:
-        steps.append(f"QBI Pass-through Deduction: $0.00 (No pass-through income or limited by taxable income)")
+        steps.append("QBI Pass-through Deduction: $0.00 (No pass-through income or limited by taxable income)")
 
     steps.append(f"Taxable Income: AGI (${agi:,.2f}) - Deductions (${total_deductions:,.2f}) = ${taxable_income:,.2f}")
     steps.append(f"Taxable Ordinary Income: ${taxable_ordinary:,.2f} | Taxable Capital Gains: ${taxable_cap_gains:,.2f}")
@@ -327,7 +380,7 @@ def calculate_federal_tax(
     if employer_payroll_tax > 0:
         steps.append(f"Employer Payroll Tax Match (FICA) on Owner's Business W-2 Wages Only = ${employer_payroll_tax:,.2f}")
 
-    steps.append(f"Combined Total Tax (Personal + SE + Payroll + Corporate) = ${combined_tax:,.2f}")
+    steps.append(f"Federal Total Tax (Personal Income + SE + Payroll + Corporate) = ${combined_tax:,.2f}")
 
     return {
         "value": total_personal_income_tax,
@@ -347,6 +400,7 @@ def calculate_federal_tax(
         "combined_effective_tax_rate": combined_effective_rate,
         "trace": {
             "formula": "Federal Tax = Ordinary Bracket Tax + Capital Gains Tax + SE Tax + Employee/Employer Payroll Tax + Corporate Tax",
+            "se_health_deduction": se_health_ded,
             "inputs": {
                 "personal_income": personal_income,
                 "business_net_income": business_net_income,
@@ -357,7 +411,7 @@ def calculate_federal_tax(
                 "retirement_contributions": retirement_contributions,
                 "filing_status": filing_status
             },
-            "assumptions_used": f"Standard deduction chosen. QBI pass-through rate is 20%.",
+            "assumptions_used": "Standard deduction chosen. QBI pass-through rate is 20%.",
             "rules_referenced": f"Filing Status: {filing_status.capitalize()}, Tax Year: {rules.get('tax_year', 2026)}",
             "steps": steps
         }

@@ -1,6 +1,6 @@
 """Scenario Manager page — create, duplicate, delete, compare scenarios."""
 import dash
-from dash import html, dcc, callback, callback_context, Input, Output, State, no_update
+from dash import html, dcc, callback, callback_context, Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import pandas as pd
@@ -53,13 +53,11 @@ def layout():
                                     f"Pick any scenario to compare its key metrics against {BASELINE_DISPLAY_NAME}.",
                                     target="label-scenarios-compare",
                                 ),
-                                dcc.Dropdown(
+                                dbc.Select(
                                     id="scenarios-list-dropdown",
                                     options=[{"label": BASELINE_DISPLAY_NAME, "value": "Baseline"}],
                                     value="Baseline",
-                                    clearable=False,
                                     className="mb-3",
-                                    style={"color": "#0f172a"},
                                 ),
                                 html.Label(
                                     [html.I(className="bi bi-pencil-square me-1 text-muted"), "Scenario Name for Operation"],

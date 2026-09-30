@@ -8,7 +8,7 @@ import dash
 from dash import html, dcc, callback, callback_context, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 
-from planner.data_manager import save_project_state, save_or_mark_unsaved
+from planner.data_manager import save_project_state, save_or_mark_unsaved, states_equal
 from planner.config import DEFAULT_TAX_YEAR
 
 dash.register_page(__name__, path="/settings", title="Settings & Backup")
@@ -33,7 +33,7 @@ def layout():
                                             id="label-tax-year", className="form-label",
                                         ),
                                         dbc.Tooltip("The tax year whose rules and brackets will be used for all calculations.", target="label-tax-year"),
-                                        dcc.Dropdown(
+                                        dbc.Select(
                                             id="settings-tax-year",
                                             options=[
                                                 {"label": "2024 Rules", "value": 2024},
@@ -41,9 +41,7 @@ def layout():
                                                 {"label": "2026 Rules", "value": 2026},
                                             ],
                                             value=2026,
-                                            clearable=False,
-                                            className="mb-3",
-                                            style={"color": "#0f172a"}
+                                            className="mb-3"
                                         ),
 
                                         html.Label(
@@ -51,13 +49,11 @@ def layout():
                                             id="label-state", className="form-label",
                                         ),
                                         dbc.Tooltip("State whose income tax rules will be applied. Currently supports North Carolina.", target="label-state"),
-                                        dcc.Dropdown(
+                                        dbc.Select(
                                             id="settings-state",
                                             options=[{"label": "North Carolina (NC)", "value": "NC"}],
                                             value="NC",
-                                            clearable=False,
-                                            className="mb-3",
-                                            style={"color": "#0f172a"}
+                                            className="mb-3"
                                         ),
 
                                         html.Label(
@@ -65,16 +61,14 @@ def layout():
                                             id="label-theme", className="form-label",
                                         ),
                                         dbc.Tooltip("Switch between dark and light interface themes.", target="label-theme"),
-                                        dcc.Dropdown(
+                                        dbc.Select(
                                             id="settings-theme",
                                             options=[
                                                 {"label": "Dark Mode (Slate)", "value": "dark"},
                                                 {"label": "Light Mode (Flatly)", "value": "light"}
                                             ],
                                             value="dark",
-                                            clearable=False,
-                                            className="mb-3",
-                                            style={"color": "#0f172a"}
+                                            className="mb-3"
                                         ),
 
                                         html.Div(
@@ -258,6 +252,11 @@ def sync_tax_year_from_dropdown(tax_year, current_state, active_scenario, autosa
         return no_update, no_update
     new_state = copy.deepcopy(current_state)
     new_state.setdefault("assumptions", {})["tax_year"] = int(tax_year)
+    # Populating inputs on page load fires these callbacks with unchanged values;
+    # don't rewrite the data files (or reformat them) when nothing actually changed.
+    if states_equal(new_state, current_state):
+        return no_update, no_update
+
     label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
     return new_state, label
 
@@ -328,6 +327,10 @@ def sync_business_mode_store_from_toggle(toggle_val):
     prevent_initial_call=True,
 )
 def save_now(n_clicks, state, active_scenario):
+    # The button is created when the Settings page renders, which fires this callback
+    # with n_clicks=None; only save on a real click.
+    if not n_clicks:
+        return no_update, no_update
     if state is None:
         return html.Span("Nothing to save yet.", className="text-muted"), no_update
     try:

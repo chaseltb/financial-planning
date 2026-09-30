@@ -10,7 +10,7 @@ def _nav_link(icon_class, label, href, business_only=False):
     classes = "sidebar-nav-link business-only" if business_only else "sidebar-nav-link"
     return dbc.NavLink(
         [
-            html.I(className=f"bi {icon_class} sidebar-nav-icon"),
+            html.I(className=f"bi {icon_class} sidebar-nav-icon", **{"aria-hidden": "true"}),
             html.Span(label, className="sidebar-nav-label"),
         ],
         href=href, active="exact", className=classes,
@@ -18,18 +18,25 @@ def _nav_link(icon_class, label, href, business_only=False):
 
 
 def render_sidebar():
-    return html.Div(
+    return html.Nav(
         [
             html.Div(
                 [
                     # Placeholder brand mark — swap for a real logo later.
-                    html.I(className="bi bi-bar-chart-steps sidebar-logo-icon"),
+                    html.Div(
+                        [
+                            html.I(className="bi bi-bar-chart-steps sidebar-logo-icon", **{"aria-hidden": "true"}),
+                            html.Span("Financial Planner", className="sidebar-brand-name"),
+                        ],
+                        className="sidebar-brand",
+                    ),
                     html.Button(
-                        html.I(className="bi bi-layout-sidebar"),
+                        html.I(className="bi bi-layout-sidebar", **{"aria-hidden": "true"}),
                         id="sidebar-collapse-toggle",
                         n_clicks=0,
                         className="sidebar-collapse-btn",
-                        title="Collapse sidebar",
+                        title="Collapse or expand sidebar",
+                        **{"aria-label": "Collapse or expand sidebar"},
                     ),
                 ],
                 className="sidebar-brand-row",
@@ -54,4 +61,5 @@ def render_sidebar():
         id="app-sidebar",
         className="sidebar-container",
         n_clicks=0,
+        **{"aria-label": "Main navigation"},
     )

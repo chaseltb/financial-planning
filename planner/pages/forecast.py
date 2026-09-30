@@ -10,7 +10,7 @@ import pandas as pd
 from planner.components.charts import apply_dark_layout
 from planner.components.editable_table import render_editable_table
 from planner.components.business_gate import render_business_gate, register_business_gate
-from planner.data_manager import load_tax_rules, save_or_mark_unsaved
+from planner.data_manager import load_tax_rules, save_or_mark_unsaved, states_equal
 from planner.config import DEFAULT_TAX_YEAR, DEFAULT_STATE
 from planner.engines.forecast import run_forecast, NUMERIC_COLS
 
@@ -56,7 +56,7 @@ def layout():
                                                 id="label-forecast-horizon",
                                                 className="form-label",
                                             ),
-                                            dcc.Dropdown(
+                                            dbc.Select(
                                                 id="forecast-horizon-dropdown",
                                                 options=[
                                                     {"label": "4 Quarters (1 Year)",  "value": 4},
@@ -67,8 +67,6 @@ def layout():
                                                     {"label": "40 Quarters (10 Years)","value": 40},
                                                 ],
                                                 value=8,
-                                                clearable=False,
-                                                style={"color": "#0f172a"},
                                             ),
                                             dbc.Tooltip(
                                                 "Choose how many quarters to project forward. Projections grow from your current business profile using your quarterly growth rate assumption.",
@@ -165,7 +163,7 @@ def populate_forecast_page(state, horizon):
     if state is None:
         return no_update, no_update, no_update
 
-    horizon = horizon or 8
+    horizon = int(horizon or 8)  # a native <select> reports its value as a string
     results = _run_forecast(state, horizon)
     forecast_df = results["forecast_df"]
     only_df = results["only_forecast_df"]
@@ -199,7 +197,7 @@ def populate_forecast_page(state, horizon):
     prevent_initial_call=True,
 )
 def update_horizon_store(val):
-    return val or 8
+    return int(val or 8)
 
 
 _OVERRIDE_FIELDS = ["Revenue", "COGS", "Payroll", "Expenses",
@@ -226,7 +224,7 @@ def persist_forecast_edits(forecast_data, current_state, active_scenario, autosa
         return no_update, no_update
 
     new_state = copy.deepcopy(current_state)
-    horizon = horizon or 8
+    horizon = int(horizon or 8)  # a native <select> reports its value as a string
 
     # Historical quarters are whatever's actually stored as history, not a hardcoded
     # year — a hardcoded "2025" check would misclassify every quarter once history
@@ -293,6 +291,11 @@ def persist_forecast_edits(forecast_data, current_state, active_scenario, autosa
         if q_overrides:
             overrides[q] = q_overrides
     new_state["assumptions"]["forecast_overrides"] = overrides
+
+    # Populating inputs on page load fires these callbacks with unchanged values;
+    # don't rewrite the data files (or reformat them) when nothing actually changed.
+    if states_equal(new_state, current_state):
+        return no_update, no_update
 
     label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
     return new_state, label

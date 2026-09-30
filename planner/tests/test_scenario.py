@@ -1,4 +1,3 @@
-import pytest
 from planner.engines.scenario import compile_scenario, apply_scenario_changes
 
 def test_scenario_overlay():

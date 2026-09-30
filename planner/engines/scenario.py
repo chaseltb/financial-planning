@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 def apply_scenario_changes(
     baseline_data: Dict[str, Any],

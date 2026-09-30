@@ -86,7 +86,8 @@ def render_companion_metrics_card(metrics: list):
     )
 
 
-def render_metric_card(title: str, value: str, subtitle: str = None, color_class: str = "", explain_target: str = None, primary: bool = False):
+def render_metric_card(title: str, value: str, subtitle: str = None, color_class: str = "", explain_target: str = None, primary: bool = False,
+                       lg: int = None, xl: int = None):
     """
     Renders a glassmorphic metric card.
     color_class: can be "emerald" or "purple" (default is blue).
@@ -94,26 +95,71 @@ def render_metric_card(title: str, value: str, subtitle: str = None, color_class
     primary: if True, applies subtle primary highlight styling while maintaining equal dimensions.
     """
     card_class = f"glass-card metric-card {color_class}" + (" metric-card-primary" if primary else "")
+    value_class = "metric-value-lg mb-1" if primary else "metric-value mb-1"
 
     # Optional info/explain icon button
     header_children = [html.Div(title, className="metric-title")]
     if explain_target:
         header_children.append(
-            html.Span(
-                "ⓘ",
+            html.Button(
+                html.I(className="bi bi-info-circle", **{"aria-hidden": "true"}),
                 id={"type": "explain-trigger", "target": explain_target},
-                className="ms-auto text-muted cursor-pointer",
-                style={"fontSize": "0.9rem", "cursor": "pointer", "float": "right"}
+                className="explain-trigger-btn",
+                n_clicks=0,
+                title=f"Show how {title} is calculated",
+                **{"aria-label": f"Show how {title} is calculated"},
             )
         )
 
-    return html.Div(
-        [
-            html.Div(header_children, style={"display": "flex", "alignItems": "center", "width": "100%"}),
-            html.Div(value, className="metric-value mb-1"),
-            html.Div(subtitle or "—", className="text-muted metric-subtitle", style={"fontSize": "0.8rem"})
-        ],
-        className=card_class
+    return dbc.Col(
+        html.Div(
+            [
+                html.Div(header_children, style={"display": "flex", "alignItems": "center", "width": "100%"}),
+                html.Div(value, className=value_class),
+                html.Div(subtitle or "—", className="text-muted", style={"fontSize": "0.8rem"})
+            ],
+            className=card_class
+        ),
+        xs=12, sm=12 if primary else 6, md=12 if primary else 6,
+        lg=lg if lg is not None else (12 if primary else 3),
+        xl=xl if xl is not None else (6 if primary else 3),
+        className="mb-4"
     )
 
 
+def render_kpi_strip(items):
+    """One card holding every headline metric, separated by thin dividers, instead of
+    a row of separate small cards. items: [{"title", "value", "subtitle", "color_class",
+    "explain_target", "primary", "business_only"}, ...]. The primary item is rendered
+    larger; business-only items drop out (and the rest re-flow) when Business Mode is off."""
+    cells = []
+    for item in items:
+        primary = item.get("primary", False)
+        header = [html.Div(item["title"], className="metric-title")]
+        if item.get("explain_target"):
+            header.append(
+                html.Button(
+                    html.I(className="bi bi-info-circle", **{"aria-hidden": "true"}),
+                    id={"type": "explain-trigger", "target": item["explain_target"]},
+                    className="explain-trigger-btn",
+                    n_clicks=0,
+                    title=f"Show how {item['title']} is calculated",
+                    **{"aria-label": f"Show how {item['title']} is calculated"},
+                )
+            )
+        classes = "kpi-item metric-card " + item.get("color_class", "")
+        if primary:
+            classes += " kpi-item-primary"
+        if item.get("business_only"):
+            classes += " business-only"
+        cells.append(
+            html.Div(
+                [
+                    html.Div(header, className="kpi-header"),
+                    html.Div(item["value"], className="metric-value-lg" if primary else "metric-value"),
+                    html.Div(item.get("subtitle") or "\u2014", className="kpi-subtitle"),
+                ],
+                className=classes,
+            )
+        )
+    return html.Div(cells, className="glass-card kpi-strip")

@@ -9,9 +9,9 @@
       {"rate": 0.10, "threshold": 0.0},
       {"rate": 0.12, "threshold": 12400.0},
       {"rate": 0.22, "threshold": 50400.0},
-      {"rate": 0.24, "threshold": 107550.0},
-      {"rate": 0.32, "threshold": 205350.0},
-      {"rate": 0.35, "threshold": 260650.0},
+      {"rate": 0.24, "threshold": 105700.0},
+      {"rate": 0.32, "threshold": 201775.0},
+      {"rate": 0.35, "threshold": 256225.0},
       {"rate": 0.37, "threshold": 640600.0}
     ],
     "married": [
@@ -19,8 +19,8 @@
       {"rate": 0.12, "threshold": 24800.0},
       {"rate": 0.22, "threshold": 100800.0},
       {"rate": 0.24, "threshold": 211400.0},
-      {"rate": 0.32, "threshold": 410700.0},
-      {"rate": 0.35, "threshold": 521300.0},
+      {"rate": 0.32, "threshold": 403550.0},
+      {"rate": 0.35, "threshold": 512450.0},
       {"rate": 0.37, "threshold": 768600.0}
     ]
   },
@@ -28,6 +28,9 @@
     "single": {"0pct_top": 49450.0, "15pct_top": 545500.0},
     "married": {"0pct_top": 98900.0, "15pct_top": 613700.0}
   },
+  "retirement_limits": {"401k": 24500.0, "401k_catchup": 8000.0, "ira": 7500.0, "hsa_family": 8750.0, "solo": 72000.0},
+  "qbi_threshold": {"single": 201750.0, "married": 403500.0},
+  "qbi_phase_range": {"single": 75000.0, "married": 150000.0},
   "corporate_rate": 0.21,
   "additional_medicare_threshold": {
     "single": 200000.0,

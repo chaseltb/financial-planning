@@ -5,8 +5,6 @@ import dash_bootstrap_components as dbc
 
 from planner.components.summary import render_explain_panel, render_empty_explain_panel
 from planner.components.charts import create_bracket_progress_chart
-from planner.data_manager import load_tax_rules
-from planner.config import DEFAULT_TAX_YEAR, DEFAULT_STATE
 from planner.engines.runner import run_all_engines
 from planner.engines.tax_tips import generate_tax_tips
 
@@ -130,7 +128,7 @@ def layout():
                                         ],
                                         className="bracket-legend mb-2",
                                     ),
-                                    dcc.Graph(id="tax-brackets-visualizer", config={"displayModeBar": False}),
+                                    dcc.Graph(id="tax-brackets-visualizer", config={"displayModeBar": False}, style={"height": "110px"}),
                                 ],
                                 className="glass-card mb-4",
                             ),
