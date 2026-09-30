@@ -1,6 +1,6 @@
 """Overview (Dashboard) page — registers its own page-scoped callbacks."""
 import dash
-from dash import html, dcc, callback, Input, Output
+from dash import html, dcc, callback, Input, Output, no_update
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 

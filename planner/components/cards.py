@@ -86,7 +86,8 @@ def render_companion_metrics_card(metrics: list):
     )
 
 
-def render_metric_card(title: str, value: str, subtitle: str = None, color_class: str = "", explain_target: str = None, primary: bool = False):
+def render_metric_card(title: str, value: str, subtitle: str = None, color_class: str = "", explain_target: str = None, primary: bool = False,
+                       lg: int = None, xl: int = None):
     """
     Renders a glassmorphic metric card.
     color_class: can be "emerald" or "purple" (default is blue).
@@ -94,6 +95,7 @@ def render_metric_card(title: str, value: str, subtitle: str = None, color_class
     primary: if True, applies subtle primary highlight styling while maintaining equal dimensions.
     """
     card_class = f"glass-card metric-card {color_class}" + (" metric-card-primary" if primary else "")
+    value_class = "metric-value-lg mb-1" if primary else "metric-value mb-1"
 
     # Optional info/explain icon button
     header_children = [html.Div(title, className="metric-title")]
