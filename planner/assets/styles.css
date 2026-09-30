@@ -1,4 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+/* Fonts are bundled locally (assets/vendor/fonts): the app makes no external network requests. */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('vendor/fonts/inter-latin-wght-normal.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Outfit';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('vendor/fonts/outfit-latin-wght-normal.woff2') format('woff2');
+}
 
 /* Personal-only "simple mode" (Settings page toggle, see business-mode-store in
    app.py). Marks nav links, cards, and chart panels that only matter if the
@@ -87,7 +102,10 @@ h1, h2, h3, h4, h5, h6 {
        evenly even when one has more text/value length than the others. A
        no-op everywhere else, since a column with only auto-height content has
        nothing taller to stretch to. */
-    height: 100%;
+    /* height:100% is applied only to a card that is the SOLE child of a column (rule
+       below); several cards stacked in one column each taking 100% overflowed the
+       column and overlapped whatever came next. */
+    height: auto;
     /* backdrop-filter creates a new stacking context, so a dropdown's open menu
        (rendered as a normal descendant, not portalled to <body>) can never paint
        above a LATER card in the page — that later card's own backdrop-filter
@@ -96,6 +114,11 @@ h1, h2, h3, h4, h5, h6 {
        card that currently owns focus — i.e. has an open dropdown — win. */
     position: relative;
     z-index: 1;
+}
+
+[class*="col-"] > .glass-card:only-child,
+.col > .glass-card:only-child {
+    height: 100%;
 }
 
 .glass-card:hover {
@@ -709,4 +732,258 @@ input.form-control, select.form-select {
     overflow: hidden;
     text-overflow: ellipsis;
     padding-right: 8px;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Accessibility & enterprise polish
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Visible keyboard focus everywhere (mouse users don't see it). */
+:focus-visible {
+    outline: 2px solid var(--accent-blue) !important;
+    outline-offset: 2px;
+}
+
+.form-control:focus-visible, .form-select:focus-visible {
+    outline: none !important;
+}
+
+/* Skip link: first tab stop, revealed on focus. */
+.skip-link {
+    position: absolute;
+    left: 16px;
+    top: -60px;
+    z-index: 2000;
+    background: var(--accent-blue);
+    color: #fff !important;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+    top: 12px;
+}
+
+#main-content:focus {
+    outline: none !important;
+}
+
+/* Bootstrap's .text-muted is too dim on the dark glass cards (below 4.5:1). */
+.text-muted {
+    color: var(--text-secondary) !important;
+}
+
+/* Header */
+.app-header {
+    gap: 16px;
+}
+
+.app-header h1 {
+    font-size: 1.75rem;
+    white-space: nowrap;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.save-status {
+    min-width: 92px;
+    white-space: nowrap;
+}
+
+/* Explain (info) trigger on metric cards: a real button, not a bare glyph. */
+.explain-trigger-btn {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1;
+    padding: 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.explain-trigger-btn:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+}
+
+/* Metric cards: tabular numerals so figures line up. */
+.metric-value, .metric-value-lg, .chip-value {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+.metric-card {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.metric-card.emerald .metric-value, .metric-card.emerald .metric-value-lg { color: var(--accent-emerald); }
+.metric-card.purple .metric-value, .metric-card.purple .metric-value-lg { color: #a78bfa; }
+:root[data-theme="light"] .metric-card.purple .metric-value { color: #6d28d9; }
+:root[data-theme="light"] .metric-card.emerald .metric-value,
+:root[data-theme="light"] .metric-card.emerald .metric-value-lg { color: #047857; }
+
+/* Sidebar brand */
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.sidebar-brand-name {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.01em;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.sidebar-container.collapsed .sidebar-brand-name {
+    display: none;
+}
+
+.sidebar-container.collapsed:hover .sidebar-brand {
+    display: none;
+}
+
+/* Dropdowns (react-select) — themed instead of a white box on the dark UI. */
+.dash-dropdown .Select-control {
+    background-color: var(--bg-secondary) !important;
+    border: 1px solid var(--border-glass) !important;
+    border-radius: 8px !important;
+    color: var(--text-primary) !important;
+}
+
+.dash-dropdown .Select-value-label,
+.dash-dropdown .Select-placeholder,
+.dash-dropdown .Select--single > .Select-control .Select-value .Select-value-label,
+.dash-dropdown .Select-input > input {
+    color: var(--text-primary) !important;
+}
+
+.dash-dropdown .Select-arrow {
+    border-top-color: var(--text-secondary) !important;
+}
+
+.dash-dropdown .Select-menu-outer {
+    background-color: var(--bg-secondary) !important;
+    border: 1px solid var(--border-glass) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+    z-index: 200;
+}
+
+.dash-dropdown .Select-option {
+    background-color: transparent !important;
+    color: var(--text-primary) !important;
+}
+
+.dash-dropdown .Select-option.is-focused,
+.dash-dropdown .Select-option:hover {
+    background-color: var(--active-nav-bg) !important;
+}
+
+.dash-dropdown .Select-option.is-selected {
+    background-color: var(--active-nav-bg) !important;
+    font-weight: 600;
+}
+
+.dash-dropdown .Select.is-focused > .Select-control {
+    border-color: var(--accent-blue) !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
+}
+
+/* Alerts: bootswatch SLATE's default is a light gray block with white text
+   (unreadable). Use a themed, high-contrast panel with a colored accent. */
+.alert {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-glass) !important;
+    border-left: 4px solid var(--accent-blue) !important;
+    border-radius: 8px !important;
+}
+
+.alert-warning { border-left-color: #f59e0b !important; }
+.alert-success { border-left-color: var(--accent-emerald) !important; }
+.alert-danger { border-left-color: #ef4444 !important; }
+
+/* Plotly can't read CSS variables, so its SVG text is themed from here. */
+.js-plotly-plot .gtitle {
+    fill: var(--text-primary) !important;
+}
+
+.js-plotly-plot .xtick text,
+.js-plotly-plot .ytick text,
+.js-plotly-plot .legendtext,
+.js-plotly-plot .xtitle,
+.js-plotly-plot .ytitle {
+    fill: var(--text-secondary) !important;
+}
+
+/* Data tables: row hover for scanability. */
+.dash-spreadsheet-container .dash-spreadsheet tr:hover td {
+    background-color: var(--active-nav-bg) !important;
+}
+
+/* Subtle busy indicator while any callback is running. */
+body:has(._dash-loading-callback)::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    z-index: 3000;
+    background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+    background-size: 50% 100%;
+    background-repeat: no-repeat;
+    animation: busy-bar 1s ease-in-out infinite;
+}
+
+@keyframes busy-bar {
+    from { background-position: -50% 0; }
+    to { background-position: 150% 0; }
+}
+
+/* Respect the user's motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Small screens: keep the header usable. */
+@media (max-width: 900px) {
+    .app-header h1 { font-size: 1.35rem; white-space: normal; }
+    .header-controls { justify-content: flex-start; width: 100%; }
+    .header-controls .dash-dropdown { width: 100% !important; max-width: 320px; }
+}
+
+/* Printing (e.g. saving a tax breakdown to PDF): drop the app chrome. */
+@media print {
+    .sidebar-container, .mobile-nav-toggle-btn, .mobile-nav-backdrop, .skip-link,
+    .save-status, .sidebar-collapse-btn, .btn { display: none !important; }
+    .main-content { margin-left: 0 !important; padding: 0 !important; }
+    body, .glass-card, .explain-panel { background: #fff !important; color: #000 !important; }
+    .glass-card { border: 1px solid #ccc !important; break-inside: avoid; backdrop-filter: none !important; }
+    .metric-value, .metric-value-lg, .text-muted, h1, h2, h3, h4 { color: #000 !important; }
 }

@@ -1,30 +1,29 @@
 """Persistent app header, rendered once in app.layout (not per-page)."""
 from dash import html, dcc
-import dash_bootstrap_components as dbc
 
 from planner.config import BASELINE_DISPLAY_NAME
 
 
 def render_header():
     """Returns the top-of-page header bar; placed once in app.layout so its IDs always exist."""
-    return html.Div(
+    return html.Header(
         [
             html.Div(
                 [
-                    dbc.Button(
-                        html.I(className="bi bi-list"),
+                    html.Button(
+                        html.I(className="bi bi-list", **{"aria-hidden": "true"}),
                         id="mobile-nav-toggle",
-                        className="mobile-nav-toggle-btn",
-                        color="secondary",
+                        className="btn btn-secondary mobile-nav-toggle-btn",
                         n_clicks=0,
+                        title="Open navigation menu",
+                        **{"aria-label": "Open navigation menu"},
                     ),
                     html.Div(
                         [
-                            html.H2(
+                            html.H1(
                                 id="page-title",
                                 children="Financial Overview",
                                 className="mb-0",
-                                style={"color": "var(--text-primary)"},
                             ),
                             html.P(
                                 "Personal + Business Financial Planner",
@@ -38,22 +37,25 @@ def render_header():
             ),
             html.Div(
                 [
-                    html.Span("Scenario:", className="text-muted me-2", style={"fontSize": "0.9rem"}),
+                    html.Label("Scenario:", htmlFor="header-scenario-dropdown", className="text-muted mb-0",
+                               style={"fontSize": "0.9rem"}),
                     dcc.Dropdown(
                         id="header-scenario-dropdown",
                         options=[{"label": BASELINE_DISPLAY_NAME, "value": "Baseline"}],
                         value="Baseline",
                         clearable=False,
-                        style={"width": "260px", "display": "inline-block", "color": "#0f172a"},
+                        style={"width": "260px", "display": "inline-block"},
                     ),
+                    # role="status" so screen readers announce save results.
                     html.Span(
-                        [html.I(className="bi bi-cloud-check-fill me-1"), "Auto-saved"],
+                        [html.I(className="bi bi-cloud-check-fill me-1", **{"aria-hidden": "true"}), "Auto-saved"],
                         id="save-status-indicator",
-                        className="ms-3",
+                        className="save-status",
+                        role="status",
                         style={"fontSize": "0.85rem", "color": "var(--accent-emerald)"},
                     ),
                 ],
-                style={"display": "flex", "alignItems": "center"},
+                className="header-controls",
             ),
         ],
         className="app-header",

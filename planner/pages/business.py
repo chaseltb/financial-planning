@@ -10,7 +10,7 @@ from planner.components.business_gate import render_business_gate, register_busi
 from planner.engines.runner import run_all_engines
 from planner.engines.forecast import DEFAULT_SEED
 from planner.engines.valuation import get_ownership_fraction
-from planner.data_manager import save_or_mark_unsaved
+from planner.data_manager import save_or_mark_unsaved, states_equal
 
 dash.register_page(__name__, path="/business", title="Business Planning")
 
@@ -414,6 +414,11 @@ def persist_business_edits(biz_vals, biz_ids, current_state, active_scenario, au
                 val = pct_points / 100.0
             new_state["business"][field] = val
 
+    # Populating inputs on page load fires these callbacks with unchanged values;
+    # don't rewrite the data files (or reformat them) when nothing actually changed.
+    if states_equal(new_state, current_state):
+        return no_update, no_update
+
     label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
     return new_state, label
 
@@ -495,6 +500,11 @@ def persist_business_financials(vals, ids, current_state, active_scenario, autos
 
     forecast[-1] = last
     new_state["forecast"] = forecast
+
+    # Populating inputs on page load fires these callbacks with unchanged values;
+    # don't rewrite the data files (or reformat them) when nothing actually changed.
+    if states_equal(new_state, current_state):
+        return no_update, no_update
 
     label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
     return new_state, label

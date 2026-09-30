@@ -8,9 +8,10 @@ from planner.engines.tax.federal import calculate_federal_tax
 from planner.engines.tax.north_carolina import calculate_nc_tax
 from planner.engines.networth import calculate_net_worth, project_net_worth
 from planner.engines.valuation import calculate_valuation, calculate_sensitivity, get_ownership_fraction
-from planner.engines.forecast import run_forecast, DEFAULT_SEED, NUMERIC_COLS
+from planner.engines.forecast import run_forecast, NUMERIC_COLS
 from planner.engines.cashflow import calculate_combined_cashflow
 from planner.engines.allocation import calculate_budget_allocation
+from planner.engines.records import annualize_records, taxable_income_by_category
 
 
 def run_all_engines(
@@ -23,6 +24,12 @@ def run_all_engines(
     Run every calculation engine against a state dict.
     Returns a flat dict of results consumed by page callbacks.
     """
+    # Honor each income/expense record's frequency (Monthly, Quarterly, ...) and
+    # taxable flag so every downstream engine sees yearly figures.
+    state = dict(state)
+    state["income"] = annualize_records(state.get("income", []))
+    state["expenses"] = annualize_records(state.get("expenses", []))
+
     tax_year = int(state.get("assumptions", {}).get("tax_year", DEFAULT_TAX_YEAR))
     rules = load_tax_rules(tax_year, DEFAULT_STATE)
     fed_rules = rules["federal"]
@@ -65,10 +72,7 @@ def run_all_engines(
     filing_status = state["profile"].get("filing_status", "single")
 
     # ── Personal income map ───────────────────────────────────────────────
-    personal_income_map: Dict[str, float] = {}
-    for inc in state["income"]:
-        cat = inc.get("category", "Other")
-        personal_income_map[cat] = personal_income_map.get(cat, 0.0) + float(inc.get("amount", 0.0))
+    personal_income_map: Dict[str, float] = taxable_income_by_category(state["income"])
     personal_income_map["W-2"] = personal_income_map.get("W-2", 0.0) + owner_w2_salary
 
     annual_net_biz_income = (ebitda_q - owner_w2_salary / 4.0) * 4.0
@@ -80,6 +84,9 @@ def run_all_engines(
         "solo_401k": float(state["profile"].get("solo_401k", 0.0)),
         "sep_ira": float(state["profile"].get("sep_ira", 0.0)),
     }
+    # Roth contributions are after-tax: they leave cash but aren't deductible, and the
+    # federal engine only sums the deductible keys above.
+    cashflow_retirement = dict(retirement, roth_ira=float(state["profile"].get("roth_ira", 0.0)))
 
     # ── Federal Tax ───────────────────────────────────────────────────────
     fed_tax = calculate_federal_tax(
@@ -110,7 +117,9 @@ def run_all_engines(
     multiples = state["assumptions"].get("valuation_multiples", {})
     metrics_val = {
         "revenue": revenue_q * 4.0,
-        "ebitda": ebitda_q * 4.0,
+        # Company EBITDA in this app is before owner salary. Value on EBITDA after
+        # owner comp so SDE (= EBITDA + owner salary) doesn't double count the salary.
+        "ebitda": ebitda_q * 4.0 - owner_w2_salary,
         "net_income": annual_net_biz_income,
         "owner_salary": owner_w2_salary,
         "capex": capex_q * 4.0,
@@ -118,7 +127,7 @@ def run_all_engines(
     }
     custom_method = {
         "name": state["assumptions"].get("custom_valuation_name", "Custom Multiplier"),
-        "metric_value": ebitda_q * 4.0,
+        "metric_value": ebitda_q * 4.0 - owner_w2_salary,
         "multiplier": float(state["assumptions"].get("custom_valuation_multiplier", 3.0)),
     }
     val_result = calculate_valuation(metrics_val, multiples, custom_method)
@@ -158,12 +167,24 @@ def run_all_engines(
     business_attributable_tax = max(0.0, combined_tax - baseline_combined_tax)
 
     # ── Cash Flow & Budget Allocation ────────────────────────────────────────
+    # Cash the owner actually receives from the business: W-2 owner salary plus
+    # their share of profit left after the business's own tax bills (corporate
+    # tax, employer FICA match). Those entity-level taxes are paid by the business,
+    # so they are excluded from the personal tax outflow to avoid double counting.
+    entity_level_tax = (
+        fed_tax["corporate_tax"] + nc_tax["corporate_tax"] + fed_tax["employer_payroll_tax"]
+    )
+    distributable = max(0.0, annual_net_biz_income - entity_level_tax)
+    business_cash_inflow = owner_w2_salary + distributable * ownership_pct
+    personal_cash_tax = max(0.0, combined_tax - entity_level_tax)
+
     cashflow = calculate_combined_cashflow(
         personal_income=state["income"],
         personal_expenses=state["expenses"],
         liabilities=state["liabilities"],
-        retirement_contributions=retirement,
-        tax_result={"combined_tax": combined_tax},
+        retirement_contributions=cashflow_retirement,
+        tax_result={"combined_tax": personal_cash_tax},
+        business_cash_inflow=business_cash_inflow,
     )
     default_allocation_pct = {"Savings": 34.0, "Liability Paydown": 33.0, "Taxable Brokerage": 33.0}
     allocation_pct = state["profile"].get("budget_allocation", default_allocation_pct)
@@ -178,6 +199,7 @@ def run_all_engines(
     nw_proj_df = pd.DataFrame(project_net_worth(
         state["assets"], state["liabilities"], quarters=8,
         quarterly_allocation=quarterly_allocation,
+        quarterly_retirement_contribution=sum(cashflow_retirement.values()) / 4.0,
     ))
 
     # Combined net worth = personal net worth + the owner's equity stake in the

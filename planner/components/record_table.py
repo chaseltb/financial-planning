@@ -7,7 +7,7 @@ one page); the delete confirmation is an inline two-step control inside the
 modal itself (see render_record_modal_body's delete section).
 """
 import math
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from dash import html
 import dash_bootstrap_components as dbc
@@ -52,6 +52,10 @@ def render_record_table(
             id={"type": "record-row", "table": table_id, "row": page * _ROWS_PER_PAGE + i},
             n_clicks=0,
             className="record-row",
+            # Keyboard-operable: assets/a11y.js turns Enter/Space into a click.
+            role="button",
+            tabIndex=0,
+            title="Edit this entry",
         )
         for i, row in enumerate(page_rows)
     ])

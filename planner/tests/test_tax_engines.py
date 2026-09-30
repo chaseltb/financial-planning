@@ -230,3 +230,62 @@ def test_cap_gains_tax_uses_year_specific_brackets():
     # 0% bracket (up to 10,000), remaining $10,000 in the 15% bracket.
     tax, _ = calculate_cap_gains_tax(15000.0, 5000.0, "single", rules_with_cg)
     assert pytest.approx(tax) == 10000.0 * 0.15
+
+
+def test_se_tax_deduction_excludes_additional_medicare():
+    from planner.engines.tax.payroll import calculate_self_employment_tax
+    rules = {"social_security_rate": 0.062, "social_security_limit": 176100.0, "medicare_rate": 0.0145,
+             "additional_medicare_rate": 0.009, "additional_medicare_threshold": {"single": 200000.0}}
+    res = calculate_self_employment_tax(300000.0, "single", rules)
+    assert res["additional_medicare"] > 0
+    assert res["deductible_amount"] == pytest.approx((res["social_security"] + res["medicare"]) / 2)
+
+
+def test_se_tax_below_400_dollars_is_zero():
+    from planner.engines.tax.payroll import calculate_self_employment_tax
+    res = calculate_self_employment_tax(400.0, "single", {})  # 400 * 0.9235 = 369.40 < 400
+    assert res["value"] == 0.0 and res["deductible_amount"] == 0.0
+
+
+def test_2025_and_2026_rule_files_match_published_irs_values():
+    import json
+    from planner.config import TAX_RULES_DIR
+    r25 = json.load(open(TAX_RULES_DIR / "2025" / "federal.json"))
+    assert r25["standard_deduction"] == {"single": 15750.0, "married": 31500.0}  # post-OBBBA
+    r26 = json.load(open(TAX_RULES_DIR / "2026" / "federal.json"))
+    single = {b["rate"]: b["threshold"] for b in r26["brackets"]["single"]}
+    married = {b["rate"]: b["threshold"] for b in r26["brackets"]["married"]}
+    assert single[0.24] == 105700.0 and single[0.32] == 201775.0 and single[0.35] == 256225.0
+    assert married[0.24] == 211400.0 and married[0.32] == 403550.0 and married[0.35] == 512450.0
+    nc26 = json.load(open(TAX_RULES_DIR / "2026" / "north_carolina.json"))
+    assert nc26["corporate_rate"] == 0.02
+
+
+def _rules_2026():
+    import json
+    from planner.config import TAX_RULES_DIR
+    return json.load(open(TAX_RULES_DIR / "2026" / "federal.json"))
+
+
+def test_retirement_deductions_capped_at_irs_limits():
+    from planner.engines.tax.federal import calculate_federal_tax
+    kwargs = dict(personal_income={"W-2": 300000.0}, business_net_income=0.0, business_entity="Sole Proprietorship",
+                  filing_status="single", rules=_rules_2026())
+    over = calculate_federal_tax(retirement_contributions={"retirement_401k": 100000.0, "retirement_ira": 50000.0}, **kwargs)
+    at_cap = calculate_federal_tax(retirement_contributions={"retirement_401k": 32500.0, "retirement_ira": 7500.0}, **kwargs)
+    assert over["agi"] == pytest.approx(at_cap["agi"])
+
+
+def test_solo_401k_deduction_limited_to_self_employment_earnings():
+    from planner.engines.tax.federal import calculate_federal_tax
+    res = calculate_federal_tax({"W-2": 50000.0}, 0.0, "Sole Proprietorship", {"solo_401k": 15000.0}, "single", _rules_2026())
+    assert res["agi"] == pytest.approx(50000.0)
+
+
+def test_qbi_limited_by_w2_wages_above_threshold():
+    from planner.engines.tax.federal import calculate_federal_tax
+    rules = _rules_2026()
+    high = calculate_federal_tax({}, 500000.0, "Sole Proprietorship", {}, "single", rules)
+    assert high["qbi_deduction"] == 0.0  # no business W-2 wages, far above the phase range
+    low = calculate_federal_tax({}, 100000.0, "Sole Proprietorship", {}, "single", rules)
+    assert low["qbi_deduction"] > 0.0

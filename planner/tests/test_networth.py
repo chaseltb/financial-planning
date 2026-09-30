@@ -110,3 +110,9 @@ def test_projection_pays_down_highest_interest_liability_first():
     expected_card = 3000.0 * (1 + 0.20 / 12.0) ** 3 - 1000.0
     assert proj[1]["Liabilities"] == pytest.approx(expected_auto + expected_card, rel=1e-3)
 
+
+
+def test_retirement_contributions_land_in_retirement_asset():
+    assets = [{"category": "Retirement", "description": "401k", "value": 1000.0, "growth_rate": 0.0}]
+    proj = project_net_worth(assets, [], quarters=4, quarterly_retirement_contribution=500.0)
+    assert proj[-1]["Net Worth"] == pytest.approx(1000.0 + 4 * 500.0)

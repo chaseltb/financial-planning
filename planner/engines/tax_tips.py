@@ -6,6 +6,7 @@ tip says so explicitly.
 from typing import Any, Dict, List
 
 from planner.engines.tax.federal import calculate_bracket_tax
+from planner.engines.records import annualize_records
 
 # Contribution limits by tax year. 2026 figures are IRS-announced amounts;
 # treat them as best-known estimates, not authoritative for years not yet finalized.
@@ -33,7 +34,8 @@ _IRA_DEDUCTION_PHASEOUT = {
 _QBI_PHASEIN = {
     2024: {"single": (191950.0, 241950.0), "married": (383900.0, 483900.0)},
     2025: {"single": (197300.0, 247300.0), "married": (394600.0, 494600.0)},
-    2026: {"single": (201850.0, 251850.0), "married": (403550.0, 503550.0)},
+    # OBBBA widened the phase-in range to $75k single / $150k married starting 2026.
+    2026: {"single": (201750.0, 276750.0), "married": (403500.0, 553500.0)},
 }
 
 _PASS_THROUGH_ENTITIES = ("Sole Proprietorship", "Single-member LLC", "Multi-member LLC")
@@ -63,7 +65,7 @@ def generate_tax_tips(state: Dict[str, Any], r: Dict[str, Any]) -> List[Dict[str
 
     profile = state.get("profile", {})
     business = state.get("business", {})
-    income = state.get("income", [])
+    income = annualize_records(state.get("income", []))
     liabilities = state.get("liabilities", [])
 
     fed = r["fed_tax"]
@@ -117,9 +119,9 @@ def generate_tax_tips(state: Dict[str, Any], r: Dict[str, Any]) -> List[Dict[str
     ira_extra = ""
     if agi >= phaseout_hi:
         ira_extra = (
-            f" Note: at your AGI, a traditional IRA contribution is likely NOT deductible if you (or a "
-            f"spouse) are covered by a workplace retirement plan — a non-deductible traditional "
-            f"contribution converted to Roth (\"backdoor Roth\") may be a better route in that case."
+            " Note: at your AGI, a traditional IRA contribution is likely NOT deductible if you (or a "
+            "spouse) are covered by a workplace retirement plan — a non-deductible traditional "
+            "contribution converted to Roth (\"backdoor Roth\") may be a better route in that case."
         )
     elif agi >= phaseout_lo:
         ira_extra = (

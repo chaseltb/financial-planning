@@ -10,7 +10,7 @@ import pandas as pd
 from planner.components.charts import apply_dark_layout
 from planner.components.editable_table import render_editable_table
 from planner.components.business_gate import render_business_gate, register_business_gate
-from planner.data_manager import load_tax_rules, save_or_mark_unsaved
+from planner.data_manager import load_tax_rules, save_or_mark_unsaved, states_equal
 from planner.config import DEFAULT_TAX_YEAR, DEFAULT_STATE
 from planner.engines.forecast import run_forecast, NUMERIC_COLS
 
@@ -293,6 +293,11 @@ def persist_forecast_edits(forecast_data, current_state, active_scenario, autosa
         if q_overrides:
             overrides[q] = q_overrides
     new_state["assumptions"]["forecast_overrides"] = overrides
+
+    # Populating inputs on page load fires these callbacks with unchanged values;
+    # don't rewrite the data files (or reformat them) when nothing actually changed.
+    if states_equal(new_state, current_state):
+        return no_update, no_update
 
     label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
     return new_state, label

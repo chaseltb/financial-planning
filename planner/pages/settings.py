@@ -8,7 +8,7 @@ import dash
 from dash import html, dcc, callback, callback_context, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 
-from planner.data_manager import save_project_state, save_or_mark_unsaved
+from planner.data_manager import save_project_state, save_or_mark_unsaved, states_equal
 from planner.config import DEFAULT_TAX_YEAR
 
 dash.register_page(__name__, path="/settings", title="Settings & Backup")
@@ -258,6 +258,11 @@ def sync_tax_year_from_dropdown(tax_year, current_state, active_scenario, autosa
         return no_update, no_update
     new_state = copy.deepcopy(current_state)
     new_state.setdefault("assumptions", {})["tax_year"] = int(tax_year)
+    # Populating inputs on page load fires these callbacks with unchanged values;
+    # don't rewrite the data files (or reformat them) when nothing actually changed.
+    if states_equal(new_state, current_state):
+        return no_update, no_update
+
     label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
     return new_state, label
 
@@ -328,6 +333,10 @@ def sync_business_mode_store_from_toggle(toggle_val):
     prevent_initial_call=True,
 )
 def save_now(n_clicks, state, active_scenario):
+    # The button is created when the Settings page renders, which fires this callback
+    # with n_clicks=None; only save on a real click.
+    if not n_clicks:
+        return no_update, no_update
     if state is None:
         return html.Span("Nothing to save yet.", className="text-muted"), no_update
     try:

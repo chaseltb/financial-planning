@@ -26,7 +26,8 @@ def render_chip_row(items):
     )
 
 
-def render_metric_card(title: str, value: str, subtitle: str = None, color_class: str = "", explain_target: str = None, primary: bool = False):
+def render_metric_card(title: str, value: str, subtitle: str = None, color_class: str = "", explain_target: str = None, primary: bool = False,
+                       lg: int = None, xl: int = None):
     """
     Renders a glassmorphic metric card.
     color_class: can be "emerald" or "purple" (default is blue).
@@ -41,11 +42,13 @@ def render_metric_card(title: str, value: str, subtitle: str = None, color_class
     header_children = [html.Div(title, className="metric-title")]
     if explain_target:
         header_children.append(
-            html.Span(
-                "ⓘ",
+            html.Button(
+                html.I(className="bi bi-info-circle", **{"aria-hidden": "true"}),
                 id={"type": "explain-trigger", "target": explain_target},
-                className="ms-auto text-muted cursor-pointer",
-                style={"fontSize": "0.9rem", "cursor": "pointer", "float": "right"}
+                className="explain-trigger-btn",
+                n_clicks=0,
+                title=f"Show how {title} is calculated",
+                **{"aria-label": f"Show how {title} is calculated"},
             )
         )
 
@@ -58,6 +61,8 @@ def render_metric_card(title: str, value: str, subtitle: str = None, color_class
             ],
             className=card_class
         ),
-        xs=12, sm=6, md=4, lg=6 if primary else 3,
+        xs=12, sm=12 if primary else 6, md=12 if primary else 6,
+        lg=lg if lg is not None else (12 if primary else 3),
+        xl=xl if xl is not None else (6 if primary else 3),
         className="mb-4"
     )

@@ -44,6 +44,20 @@ def apply_dark_layout(fig, title_text: str):
     return fig
 
 
+def add_empty_note(fig, text: str):
+    """Centered message for a chart with nothing to plot, so a blank panel reads as
+    'no data yet' rather than a rendering bug."""
+    fig.add_annotation(
+        text=text, xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False,
+        font={"size": 14, "color": _CHART_TEXT_COLOR},
+    )
+    fig.data = ()
+    fig.update_layout(showlegend=False)
+    fig.update_xaxes(visible=False)
+    fig.update_yaxes(visible=False)
+    return fig
+
+
 def create_net_worth_trend(projection_df: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
     fig.add_trace(
@@ -104,10 +118,16 @@ def create_business_trend(forecast_df: pd.DataFrame) -> go.Figure:
             marker={"color": "rgba(59, 130, 246, 0.2)"}
         )
     )
-    return apply_dark_layout(fig, "Business Cash Flow & Revenue Trend")
+    fig = apply_dark_layout(fig, "Business Cash Flow & Revenue Trend")
+    has_activity = any(
+        float(v or 0) != 0 for col in ("Revenue", "EBITDA", "Cash") for v in forecast_df[col]
+    )
+    if not has_activity:
+        add_empty_note(fig, "No business activity entered yet.<br>Add revenue and expenses on the Business page.")
+    return fig
 
 
-def create_allocation_chart(allocation_dict: Dict[str, float], title: str) -> go.Figure:
+def create_allocation_chart(allocation_dict: Dict[str, float], title: str, empty_text: str = "Nothing to show yet.") -> go.Figure:
     labels = list(allocation_dict.keys())
     values = list(allocation_dict.values())
     
@@ -122,7 +142,10 @@ def create_allocation_chart(allocation_dict: Dict[str, float], title: str) -> go
             )
         ]
     )
-    return apply_dark_layout(fig, title)
+    fig = apply_dark_layout(fig, title)
+    if not any(float(v or 0) > 0 for v in values):
+        add_empty_note(fig, empty_text)
+    return fig
 
 
 def create_sensitivity_chart(sensitivity_curve: List[Dict[str, Any]], base_method: str) -> go.Figure:
@@ -142,7 +165,10 @@ def create_sensitivity_chart(sensitivity_curve: List[Dict[str, Any]], base_metho
     )
     fig.update_xaxes(title_text="% Change in Metric", tickformat=".0f")
     fig.update_yaxes(title_text="Valuation ($)")
-    return apply_dark_layout(fig, f"Valuation Sensitivity for {base_method}")
+    fig = apply_dark_layout(fig, f"Valuation Sensitivity for {base_method}")
+    if not any(float(v or 0) != 0 for v in df["valuation"]):
+        add_empty_note(fig, "No valuation to stress-test yet.")
+    return fig
 
 
 def create_bracket_progress_chart(brackets: List[Dict[str, float]], taxable_income: float) -> go.Figure:

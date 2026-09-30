@@ -1,9 +1,9 @@
 import pandas as pd
-import numpy as np
 from typing import Dict, Any, List
 from planner.engines.tax.federal import calculate_federal_tax
 from planner.engines.tax.north_carolina import calculate_nc_tax
 from planner.engines.valuation import get_ownership_fraction
+from planner.engines.records import taxable_income_by_category
 
 def get_next_quarter(quarter_str: str) -> str:
     """
@@ -81,7 +81,6 @@ def run_forecast(
     
     current_quarter = last_row["Quarter"]
     prev_rev = float(last_row["Revenue"])
-    prev_cogs = float(last_row["COGS"])
     prev_payroll = float(last_row["Payroll"])
     prev_expenses = float(last_row["Expenses"])
     prev_capex = float(last_row["Capital expenditures"])
@@ -103,10 +102,7 @@ def run_forecast(
     forecast_rows = []
 
     # Personal profile and non-business income for tax calculations
-    personal_income_base = {}
-    for inc in personal_income_list:
-        category = inc.get("category")
-        personal_income_base[category] = personal_income_base.get(category, 0.0) + float(inc.get("amount", 0.0))
+    personal_income_base = taxable_income_by_category(personal_income_list)
         
     retirement_contributions = {
         "retirement_401k": float(personal_profile.get("retirement_401k", 0.0)),
@@ -221,11 +217,14 @@ def run_forecast(
 
         # 3. Project Cash
         # Cash Flow = Revenue - COGS - Payroll - Expenses - CapEx - Owner salary - Distributions - Business-level taxes
-        cash_flow = rev - cogs - payroll - expenses - capex - owner_salary - distributions - business_tax_outflow
+        # Co-owners' pro-rata shares are also paid out of company cash; "Distributions" is
+        # this owner's share only, so gross it up to the total distributed.
+        total_distributed = distributions / ownership_pct if ownership_pct > 0 else 0.0
+        cash_flow = rev - cogs - payroll - expenses - capex - owner_salary - total_distributed - business_tax_outflow
         cash = q_overrides.get("Cash", prev_cash + cash_flow)
         
         # 4. Valuation
-        biz_val = max(0.0, ebitda * 4.0 * ebitda_mult)
+        biz_val = max(0.0, (ebitda - owner_salary) * 4.0 * ebitda_mult)
         
         row = {
             "Quarter": next_q,
@@ -247,7 +246,6 @@ def run_forecast(
         # Prepare for next iteration
         current_quarter = next_q
         prev_rev = rev
-        prev_cogs = cogs
         prev_payroll = payroll
         prev_expenses = expenses
         prev_capex = capex
@@ -261,7 +259,7 @@ def run_forecast(
         f"Forecasting {horizon} quarters forward starting from {history_df.iloc[-1]['Quarter']}.",
         f"EBITDA Multiple applied: {ebitda_mult} (Annualized EBITDA * Multiple).",
         f"Average COGS/Revenue ratio from history: {avg_cogs_pct*100:.1f}%.",
-        f"Quarterly tax estimates computed dynamically by annualizing EBITDA and running combined Federal + NC tax engines."
+        "Quarterly tax estimates computed dynamically by annualizing EBITDA and running combined Federal + NC tax engines."
     ]
     
     return {

@@ -1,6 +1,6 @@
 """Overview (Dashboard) page — registers its own page-scoped callbacks."""
 import dash
-from dash import html, dcc, callback, Input, Output, no_update
+from dash import html, dcc, callback, Input, Output
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
@@ -26,39 +26,35 @@ def layout():
 
 
 def _render_charts_row(fig_nw, fig_biz, fig_alloc, explain, business_enabled):
-    """Asset Allocation normally shares row 2 with the (business-only) trend chart's
-    row 3 slot; with business hidden there's nothing left to pair it with there, so
-    it moves up to fill the empty spot next to Net Worth instead, and the explain
-    panel takes the full width of what would've been its own row."""
-    graph_card = lambda graph_id, fig: html.Div(dcc.Graph(id=graph_id, figure=fig), className="glass-card mb-4")
+    """Row 1: net worth projection + asset allocation. Row 2 (business only): the
+    business trend, full width. Last row: the calculation-audit panel, full width,
+    so no chart card is ever stretched to match a tall text panel."""
+    graph_card = lambda graph_id, fig: html.Div(
+        dcc.Graph(
+            id=graph_id, figure=fig,
+            # An empty-state chart only needs room for its message.
+            style={"height": "200px" if fig.layout.annotations else "360px"},
+            config={"displaylogo": False, "displayModeBar": False, "responsive": True},
+        ),
+        className="glass-card mb-4",
+    )
 
-    if business_enabled:
-        return [
-            dbc.Row(
-                [
-                    dbc.Col(graph_card("overview-networth-chart", fig_nw), lg=6),
-                    dbc.Col(graph_card("overview-business-chart", fig_biz), lg=6, className="business-only"),
-                ]
-            ),
-            dbc.Row(
-                [
-                    dbc.Col(graph_card("overview-allocation-chart", fig_alloc), lg=6),
-                    dbc.Col(html.Div(id="overview-explain-container", children=explain), lg=6),
-                ]
-            ),
-        ]
-
-    return [
+    rows = [
         dbc.Row(
             [
-                dbc.Col(graph_card("overview-networth-chart", fig_nw), lg=6),
-                dbc.Col(graph_card("overview-allocation-chart", fig_alloc), lg=6),
+                dbc.Col(graph_card("overview-networth-chart", fig_nw), lg=7),
+                dbc.Col(graph_card("overview-allocation-chart", fig_alloc), lg=5),
             ]
         ),
-        dbc.Row(
-            dbc.Col(html.Div(id="overview-explain-container", children=explain), lg=12),
-        ),
     ]
+    if business_enabled:
+        rows.append(
+            dbc.Row(dbc.Col(graph_card("overview-business-chart", fig_biz), lg=12, className="business-only"))
+        )
+    rows.append(
+        dbc.Row(dbc.Col(html.Div(id="overview-explain-container", children=explain), lg=12))
+    )
+    return rows
 
 
 @callback(
@@ -106,6 +102,9 @@ def update_overview(state, explain_target, business_mode_enabled):
         if business_enabled
         else f"{r['effective_rate'] * 100:.1f}% effective"
     )
+    # Column spans so the row always fills evenly: with a business, the headline card
+    # takes a third of the row and four cards share the rest; without, three equal cards.
+    other_lg, other_xl = (3, 2) if business_enabled else (4, 4)
     cards = []
     if business_enabled:
         cards.append(render_metric_card(
@@ -113,19 +112,21 @@ def update_overview(state, explain_target, business_mode_enabled):
             f"${r['combined_net_worth']:,.0f}",
             f"Personal + {r['business_equity_value']:,.0f} equity stake",
             "emerald", "combined_net_worth",
-            primary=True,
+            primary=True, xl=4,
         ))
     cards.append(render_metric_card(
         "Combined Tax",
         f"${r['combined_tax']:,.0f}",
         combined_tax_subtitle,
         "purple", "combined_tax",
+        lg=other_lg, xl=other_xl,
     ))
     cards.append(render_metric_card(
         "Personal Net Worth",
         f"${nw_result['value']:,.0f}",
         f"Assets: ${nw_result['total_assets']:,.0f}",
         "", "net_worth",
+        lg=other_lg, xl=other_xl,
     ))
     if business_enabled:
         cards.append(render_metric_card(
@@ -133,12 +134,14 @@ def update_overview(state, explain_target, business_mode_enabled):
             f"${val_result['value']:,.0f}",
             f"EBITDA × {multiples.get('ebitda', 6.0)}",
             "emerald", "business_value",
+            lg=other_lg, xl=other_xl,
         ))
     cards.append(render_metric_card(
         "Cash Available",
         f"${float(recent_q['Cash']):,.0f}",
         f"End of {recent_q['Quarter']}",
         "", "cash_available",
+        lg=other_lg, xl=other_xl,
     ))
 
     fig_nw = create_net_worth_trend(nw_proj_df)

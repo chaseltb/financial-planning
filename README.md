@@ -76,4 +76,25 @@ The sidebar has one page per topic:
 
 ## About your data
 
-All of your financial information is stored in plain JSON and CSV files inside `planner/data/`. Nothing leaves your computer. This folder is intentionally left out of version control (see `.gitignore`), so your personal numbers are never accidentally shared or uploaded. The median values for comparison are all from the same year and are estimates. 
+All of your financial information is stored in plain JSON and CSV files inside `planner/data/`. Nothing leaves your computer. This folder is intentionally left out of version control (see `.gitignore`), so your personal numbers are never accidentally shared or uploaded. On first run, any missing file is created from the sample starter data in `planner/seed_data/` (median NC figures and example scenarios); your own edits are never overwritten. The median values for comparison are all from the same year and are estimates. 
+
+
+## Known limitations
+
+The estimates are deliberately simplified. Things the app does **not** model:
+
+- Itemized deductions, credits (child tax credit, etc.), AMT, and NC-specific adjustments to federal AGI.
+- The QBI deduction treats the business as a non-specialized-service trade; above the income threshold it is limited by 50% of business W-2 wages, with no property (UBIA) test and no SSTB phase-out to zero.
+- Retirement deductions are capped at IRS limits, but income-based phase-outs (e.g. traditional IRA when covered by a workplace plan) are only flagged in the tax tips.
+- Net operating loss carryforwards, S-Corp shareholder basis limits, and passive-loss rules.
+- Employer 401(k) matching in the net worth projection.
+
+## Development
+
+```
+pip install -r requirements-dev.txt
+ruff check planner
+python -m pytest planner/tests
+```
+
+CI (GitHub Actions) runs the same two commands on every push and pull request.

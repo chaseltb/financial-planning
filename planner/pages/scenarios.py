@@ -1,6 +1,6 @@
 """Scenario Manager page — create, duplicate, delete, compare scenarios."""
 import dash
-from dash import html, dcc, callback, callback_context, Input, Output, State, no_update
+from dash import html, dcc, callback, callback_context, Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import pandas as pd

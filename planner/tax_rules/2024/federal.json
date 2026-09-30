@@ -28,6 +28,9 @@
     "single": {"0pct_top": 47025.0, "15pct_top": 518900.0},
     "married": {"0pct_top": 94050.0, "15pct_top": 583750.0}
   },
+  "retirement_limits": {"401k": 23000.0, "401k_catchup": 7500.0, "ira": 7000.0, "hsa_family": 8300.0, "solo": 69000.0},
+  "qbi_threshold": {"single": 191950.0, "married": 383900.0},
+  "qbi_phase_range": {"single": 50000.0, "married": 100000.0},
   "corporate_rate": 0.21,
   "additional_medicare_threshold": {
     "single": 200000.0,

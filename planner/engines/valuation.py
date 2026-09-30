@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 def get_ownership_fraction(business_profile: Dict[str, Any]) -> float:
     """Single source of truth for the owner's ownership share, as a 0-1 fraction.

@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 def calculate_depreciation(
     cost_basis: float,
@@ -26,36 +26,40 @@ def calculate_depreciation(
     ]
     
     if method == "Straight Line":
-        depreciation_expense = max(0.0, (cost_basis - salvage_value) / useful_life)
-        accumulated_depreciation = depreciation_expense * min(year_index, useful_life)
+        annual_expense = max(0.0, (cost_basis - salvage_value) / useful_life) if useful_life > 0 else 0.0
+        # No depreciation once the asset's useful life has been fully expensed.
+        depreciation_expense = annual_expense if 1 <= year_index <= useful_life else 0.0
+        accumulated_depreciation = annual_expense * min(max(year_index, 0), useful_life)
         book_value_end = max(salvage_value, cost_basis - accumulated_depreciation)
-        book_value_start = max(salvage_value, cost_basis - (depreciation_expense * (year_index - 1)))
+        book_value_start = max(salvage_value, cost_basis - (annual_expense * min(max(year_index - 1, 0), useful_life)))
         
-        steps.append(f"Formula: (Cost Basis - Salvage Value) / Useful Life")
-        steps.append(f"Calculation: (${cost_basis:,.2f} - ${salvage_value:,.2f}) / {useful_life} = ${depreciation_expense:,.2f} per year")
+        steps.append("Formula: (Cost Basis - Salvage Value) / Useful Life")
+        steps.append(f"Calculation: (${cost_basis:,.2f} - ${salvage_value:,.2f}) / {useful_life} = ${annual_expense:,.2f} per year")
         steps.append(f"Year {year_index} Book Value: Start: ${book_value_start:,.2f} | End: ${book_value_end:,.2f}")
         
     elif "MACRS 5-Year" in method:
-        idx = min(year_index - 1, len(macrs_5_rates) - 1)
-        rate = macrs_5_rates[idx]
+        # Beyond the last table year the asset is fully depreciated: rate is 0, not a repeat of the last rate.
+        idx = year_index - 1
+        rate = macrs_5_rates[idx] if 0 <= idx < len(macrs_5_rates) else 0.0
         depreciation_expense = cost_basis * rate
         
-        accumulated_dep = sum(macrs_5_rates[:idx+1]) * cost_basis
+        accumulated_dep = sum(macrs_5_rates[:max(idx + 1, 0)]) * cost_basis
         book_value_end = max(0.0, cost_basis - accumulated_dep)
-        book_value_start = max(0.0, cost_basis - sum(macrs_5_rates[:idx]) * cost_basis)
+        book_value_start = max(0.0, cost_basis - sum(macrs_5_rates[:max(idx, 0)]) * cost_basis)
         
         steps.append(f"Formula: Cost Basis * MACRS 5-Year Rate for Year {year_index}")
         steps.append(f"Calculation: ${cost_basis:,.2f} * {rate*100:.2f}% = ${depreciation_expense:,.2f}")
         steps.append(f"Year {year_index} Book Value: Start: ${book_value_start:,.2f} | End: ${book_value_end:,.2f}")
         
     elif "MACRS 7-Year" in method:
-        idx = min(year_index - 1, len(macrs_7_rates) - 1)
-        rate = macrs_7_rates[idx]
+        # Beyond the last table year the asset is fully depreciated: rate is 0, not a repeat of the last rate.
+        idx = year_index - 1
+        rate = macrs_7_rates[idx] if 0 <= idx < len(macrs_7_rates) else 0.0
         depreciation_expense = cost_basis * rate
         
-        accumulated_dep = sum(macrs_7_rates[:idx+1]) * cost_basis
+        accumulated_dep = sum(macrs_7_rates[:max(idx + 1, 0)]) * cost_basis
         book_value_end = max(0.0, cost_basis - accumulated_dep)
-        book_value_start = max(0.0, cost_basis - sum(macrs_7_rates[:idx]) * cost_basis)
+        book_value_start = max(0.0, cost_basis - sum(macrs_7_rates[:max(idx, 0)]) * cost_basis)
         
         steps.append(f"Formula: Cost Basis * MACRS 7-Year Rate for Year {year_index}")
         steps.append(f"Calculation: ${cost_basis:,.2f} * {rate*100:.2f}% = ${depreciation_expense:,.2f}")

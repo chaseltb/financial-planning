@@ -8,7 +8,7 @@ import dash_bootstrap_components as dbc
 from planner.components.record_table import render_record_table, render_record_modal, render_field_input
 from planner.components.citations import render_citation_panel
 from planner.components.charts import create_allocation_chart
-from planner.data_manager import save_or_mark_unsaved
+from planner.data_manager import save_or_mark_unsaved, states_equal
 from planner.engines.runner import run_all_engines
 from planner.engines.allocation import calculate_budget_allocation
 
@@ -434,11 +434,11 @@ def update_budget_allocation_display(state, alloc_vals, alloc_ids):
             "Reduce expenses or debt service, or increase income, to free up a surplus.",
             color="warning",
         )
-        fig = create_allocation_chart({"No surplus available": 1}, "Budget Allocation")
+        fig = create_allocation_chart({}, "Budget Allocation", empty_text="No surplus to allocate this year.")
     else:
         summary = dbc.Alert(
             [
-                f"Net cash flow after taxes, expenses, debt service, and retirement contributions: ",
+                "Net cash flow after taxes, expenses, debt service, and retirement contributions: ",
                 html.Strong(f"${net_cash_flow:,.0f}/yr"),
                 ". Allocated as: ",
                 ", ".join(f"{k} ${v:,.0f}" for k, v in allocation["amounts"].items()),
@@ -510,6 +510,11 @@ def persist_profile_and_allocation_edits(
                     pass
         new_state["profile"]["budget_allocation"] = allocation_pct
     else:
+        return no_update, no_update
+
+    # Populating inputs on page load fires these callbacks with unchanged values;
+    # don't rewrite the data files (or reformat them) when nothing actually changed.
+    if states_equal(new_state, current_state):
         return no_update, no_update
 
     label = save_or_mark_unsaved(new_state, active_scenario, autosave_enabled)
