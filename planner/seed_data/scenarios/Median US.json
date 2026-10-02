@@ -1,0 +1,31 @@
+{
+  "name": "Median US",
+  "changes": {
+    "income": [
+      {
+        "id": "inc_1",
+        "category": "W-2",
+        "description": "Job Salary (US median full-time earnings, BLS 2025: $1,204/wk x 52)",
+        "amount": 62608,
+        "frequency": "Annual",
+        "taxable": "True"
+      },
+      {
+        "id": "inc_3",
+        "category": "Dividends",
+        "description": "Index Fund Dividends",
+        "amount": 150,
+        "frequency": "Annual",
+        "taxable": "True"
+      },
+      {
+        "id": "inc_4",
+        "category": "Interest",
+        "description": "High Yield Savings Account",
+        "amount": 130,
+        "frequency": "Annual",
+        "taxable": "True"
+      }
+    ]
+  }
+}

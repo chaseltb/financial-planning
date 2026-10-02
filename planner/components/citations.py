@@ -11,6 +11,7 @@ NC_MEDIAN_SOURCES = [
     ("Typical 401(k) contribution rate", "~7% of salary", "Fidelity", "2024"),
     ("Average auto loan balance", "$24,297",   "Experian State of the Automotive Finance Market", "2024"),
     ("Average credit card balance", "$6,730",  "Experian State of Credit Cards", "2024"),
+    ("Median full-time earnings (US)", "$62,608/yr ($1,204/wk x 52)", "U.S. Bureau of Labor Statistics, Usual Weekly Earnings", "2025"),
     ("Junior Software Engineer salary (national)", "$82,506/yr", "Salary.com", "2025"),
     ("Senior Software Engineer salary (national)", "$125,720/yr", "Salary.com", "2025"),
 ]

@@ -1351,3 +1351,27 @@ select.form-select option {
     background-color: var(--bg-secondary);
     color: var(--text-primary);
 }
+
+/* The headline figure in the KPI strip (this rule was lost in a merge). */
+.metric-value-lg {
+    font-family: var(--font-heading);
+    font-size: 2.6rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.05;
+}
+
+/* KPI strip cells are divided by thin rules; the colored left stripe is for stand-alone cards only. */
+.kpi-item.metric-card,
+.kpi-item.metric-card.emerald,
+.kpi-item.metric-card.purple {
+    border-left: none;
+    min-height: 0;
+    height: auto;
+    background: none;
+}
+
+.kpi-item + .kpi-item,
+.kpi-item.metric-card + .kpi-item.metric-card {
+    border-left: 1px solid var(--border-glass);
+}
