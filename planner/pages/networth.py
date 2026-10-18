@@ -59,21 +59,21 @@ def layout():
                                 dbc.Row(
                                     [
                                         dbc.Col([html.Div("Total Assets", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                 html.H3(id="nw-total-assets", style={"color": "var(--accent-emerald)"})], width=4),
+                                                 html.H3(id="nw-total-assets", style={"color": "var(--accent-emerald)"})], xs=12, sm=4, className="mb-2"),
                                         dbc.Col([html.Div("Total Liabilities", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                 html.H3(id="nw-total-liab", style={"color": "var(--accent-blue)"})], width=4),
+                                                 html.H3(id="nw-total-liab", style={"color": "var(--accent-blue)"})], xs=12, sm=4, className="mb-2"),
                                         dbc.Col([html.Div("Personal Net Worth", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                 html.H3(id="nw-net-worth", style={"color": "var(--accent-purple)"})], width=4),
+                                                 html.H3(id="nw-net-worth", style={"color": "var(--accent-purple)"})], xs=12, sm=4, className="mb-2"),
                                     ]
                                 ),
                                 dbc.Row(
                                     [
                                         dbc.Col([html.Div("Business Equity Stake", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                 html.H3(id="nw-business-equity", style={"color": "var(--accent-emerald)"})], width=6),
+                                                 html.H3(id="nw-business-equity", style={"color": "var(--accent-emerald)"})], xs=12, sm=6, className="mb-2"),
                                         dbc.Col([html.Div("Combined Net Worth", className="text-muted", style={"fontSize": "0.8rem"}),
-                                                 html.H3(id="nw-combined-net-worth", style={"color": "var(--accent-emerald)"})], width=6),
+                                                 html.H3(id="nw-combined-net-worth", style={"color": "var(--accent-emerald)"})], xs=12, sm=6, className="mb-2"),
                                     ],
-                                    className="mt-3",
+                                    className="mt-2",
                                 ),
                                 html.Hr(style={"borderColor": "rgba(255,255,255,0.08)"}),
                                 html.Div(id="networth-assets-table-container", className="mb-4"),
@@ -90,8 +90,8 @@ def layout():
                                     html.H4("Asset & Liability Allocations", className="mb-3"),
                                     dbc.Row(
                                         [
-                                            dbc.Col(dcc.Graph(id="networth-asset-pie"), width=6),
-                                            dbc.Col(dcc.Graph(id="networth-debt-pie"), width=6),
+                                            dbc.Col(dcc.Graph(id="networth-asset-pie"), xs=12, sm=6, className="mb-3"),
+                                            dbc.Col(dcc.Graph(id="networth-debt-pie"), xs=12, sm=6, className="mb-3"),
                                         ]
                                     ),
                                 ],

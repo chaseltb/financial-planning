@@ -21,7 +21,7 @@ def apply_dark_layout(fig, title_text: str):
         },
         # Fixed default height: with autosize and no height, Plotly sizes to its container,
         # which sizes to the chart's content, so charts (and their cards) kept growing.
-        height=360,
+        height=320,
         autosize=True,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
@@ -147,6 +147,8 @@ def create_allocation_chart(allocation_dict: Dict[str, float], title: str, empty
         ]
     )
     fig = apply_dark_layout(fig, title)
+    # Outside slice labels need headroom so they don't run into the title.
+    fig.update_layout(margin={"t": 90, "b": 50, "l": 30, "r": 30})
     if not any(float(v or 0) > 0 for v in values):
         add_empty_note(fig, empty_text)
     return fig

@@ -37,7 +37,7 @@ def layout():
                                                     target="label-tax-fed",
                                                 ),
                                                 html.H4(id="tax-breakdown-fed"),
-                                            ], width=4, className="mb-3"),
+                                            ], xs=6, sm=4, className="mb-3"),
                                             dbc.Col([
                                                 html.Div(
                                                     [html.I(className="bi bi-geo-alt-fill me-1 text-muted"), "NC State Tax"],
@@ -49,7 +49,7 @@ def layout():
                                                     target="label-tax-nc",
                                                 ),
                                                 html.H4(id="tax-breakdown-nc"),
-                                            ], width=4, className="mb-3"),
+                                            ], xs=6, sm=4, className="mb-3"),
                                             dbc.Col([
                                                 html.Div(
                                                     [html.I(className="bi bi-person-badge me-1 text-muted"), "Payroll & SE Tax"],
@@ -61,7 +61,7 @@ def layout():
                                                     target="label-tax-payroll",
                                                 ),
                                                 html.H4(id="tax-breakdown-payroll"),
-                                            ], width=4, className="mb-3"),
+                                            ], xs=6, sm=4, className="mb-3"),
                                             dbc.Col([
                                                 html.Div(
                                                     [html.I(className="bi bi-building me-1 text-muted"), "Corporate Income Tax"],
@@ -73,7 +73,7 @@ def layout():
                                                     target="label-tax-corp",
                                                 ),
                                                 html.H4(id="tax-breakdown-corp"),
-                                            ], id="tax-breakdown-corp-col", width=4, className="mb-3 business-only"),
+                                            ], id="tax-breakdown-corp-col", xs=6, sm=4, className="mb-3 business-only"),
                                             dbc.Col([
                                                 html.Div(
                                                     [html.I(className="bi bi-calculator me-1 text-muted"), "Combined Total Tax"],
@@ -86,7 +86,7 @@ def layout():
                                                 ),
                                                 html.H4(id="tax-breakdown-combined",
                                                          style={"color": "var(--accent-purple)"}),
-                                            ], width=4, className="mb-3"),
+                                            ], xs=6, sm=4, className="mb-3"),
                                             dbc.Col([
                                                 html.Div(
                                                     [html.I(className="bi bi-percent me-1 text-muted"), "Effective Tax Rate"],
@@ -99,7 +99,7 @@ def layout():
                                                 ),
                                                 html.H4(id="tax-breakdown-effective-rate",
                                                          style={"color": "var(--accent-emerald)"}),
-                                            ], width=4, className="mb-3"),
+                                            ], xs=6, sm=4, className="mb-3"),
                                         ]
                                     ),
                                     html.Hr(style={"borderColor": "rgba(255,255,255,0.08)"}),

@@ -111,7 +111,9 @@ All screenshots are the real application running on built-in sample data, dark t
 | ![Scenario Manager](docs/screenshots/scenarios.png) | **Scenario Manager:** Median US compared side by side with a Senior Software Engineer salary — tax, EBITDA, cash, and net worth, as a table and a chart | The "test the decision first" story |
 | ![Settings](docs/screenshots/settings.png) | **Settings & Backup:** tax year, theme, autosave, JSON/Excel export and restore | Privacy and "your data stays yours" messaging |
 
-*To regenerate after a UI change: start the app (`python run.py`), then capture each page with a headless browser at 1440 x 1000 (for example Chrome's `--headless --screenshot` option). Use the sample data so no personal numbers appear. A light-theme set and a phone-width set would be useful additions.*
+**Light theme:** the same eight screens in the light theme (with the newer, tighter layout and squarer corners) are in [`docs/screenshots-light/`](docs/screenshots-light/), using the same file names. The dark set above was captured before that layout tightening and is kept as-is.
+
+*To regenerate after a UI change: start the app (`python run.py`), then capture each page with a headless browser at 1440 x 1000 (for example Chrome's `--headless --screenshot` option). Use the sample data so no personal numbers appear. A phone-width set would be a useful addition.*
 
 ---
 

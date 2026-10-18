@@ -345,22 +345,22 @@ def layout():
                                     dbc.Row(
                                         [
                                             dbc.Col([html.Div("EBITDA (Current Quarter, Annualized)", className="text-muted", style={"fontSize": "0.85rem"}),
-                                                     html.H3(id="biz-ebitda-val", style={"color": "var(--accent-emerald)", "fontWeight": "bold"})], width=4),
+                                                     html.H3(id="biz-ebitda-val", style={"color": "var(--accent-emerald)", "fontWeight": "bold"})], xs=6, sm=4, className="mb-2"),
                                             dbc.Col([html.Div("Net Income (After Owner Salary)", className="text-muted", style={"fontSize": "0.85rem"}),
-                                                     html.H3(id="biz-netincome-val", style={"color": "var(--accent-blue)", "fontWeight": "bold"})], width=4),
+                                                     html.H3(id="biz-netincome-val", style={"color": "var(--accent-blue)", "fontWeight": "bold"})], xs=6, sm=4, className="mb-2"),
                                             dbc.Col([html.Div("Operating Margin", className="text-muted", style={"fontSize": "0.85rem"}),
-                                                     html.H3(id="biz-margin-val", style={"fontWeight": "bold"})], width=4),
+                                                     html.H3(id="biz-margin-val", style={"fontWeight": "bold"})], xs=6, sm=4, className="mb-2"),
                                         ],
-                                        className="mb-4",
+                                        className="mb-3",
                                     ),
                                     dbc.Row(
                                         [
                                             dbc.Col([html.Div("Owner Distributions (Your Share)", className="text-muted", style={"fontSize": "0.85rem"}),
-                                                     html.H3(id="biz-distributions-val", style={"fontWeight": "bold"})], width=4),
+                                                     html.H3(id="biz-distributions-val", style={"fontWeight": "bold"})], xs=6, sm=4, className="mb-2"),
                                             dbc.Col([html.Div("Employer Payroll Tax (FICA Match)", className="text-muted", style={"fontSize": "0.85rem"}),
-                                                     html.H3(id="biz-employer-payroll-val", style={"color": "var(--accent-purple)", "fontWeight": "bold"})], width=4),
+                                                     html.H3(id="biz-employer-payroll-val", style={"color": "var(--accent-purple)", "fontWeight": "bold"})], xs=6, sm=4, className="mb-2"),
                                             dbc.Col([html.Div("Est. Business Tax Burden (Fed + NC)", className="text-muted", style={"fontSize": "0.85rem"}),
-                                                     html.H3(id="biz-combined-tax-val", style={"fontWeight": "bold"})], width=4),
+                                                     html.H3(id="biz-combined-tax-val", style={"fontWeight": "bold"})], xs=6, sm=4, className="mb-2"),
                                         ],
                                     ),
                                 ],
@@ -516,6 +516,10 @@ def persist_business_edits(biz_vals, biz_ids, current_state, active_scenario, au
                     val = max(0.0, float(val or 0.0))
                 except ValueError:
                     val = 0.0
+                # A deduction never entered (no key yet) and still 0: don't add the key, which
+                # would otherwise rewrite the data files just from opening the page.
+                if val == 0.0 and field not in new_state["business"]:
+                    continue
             elif field in ["revenue_growth", "expense_growth"]:
                 # Field displays whole percentage points (5 = 5%); stored as a fraction.
                 try:

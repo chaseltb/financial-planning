@@ -163,7 +163,7 @@ def layout():
                                                         className="mb-3",
                                                     ),
                                                 ],
-                                                width=6,
+                                                xs=12, sm=6,
                                             ),
                                             dbc.Col(
                                                 [
@@ -174,7 +174,7 @@ def layout():
                                                         className="mb-3",
                                                     ),
                                                 ],
-                                                width=6,
+                                                xs=12, sm=6,
                                             ),
                                         ]
                                     ),

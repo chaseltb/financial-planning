@@ -35,7 +35,7 @@ def _render_charts_row(fig_nw, fig_biz, fig_alloc, explain, business_enabled):
         dcc.Graph(
             id=graph_id, figure=fig,
             # An empty-state chart only needs room for its message.
-            style={"height": "200px" if fig.layout.annotations else "360px"},
+            style={"height": "200px" if fig.layout.annotations else "320px"},
             config={"displaylogo": False, "displayModeBar": False, "responsive": True},
         ),
         className="glass-card",

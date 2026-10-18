@@ -179,7 +179,7 @@ def layout():
                                             "lineHeight": "100px",
                                             "borderWidth": "2px",
                                             "borderStyle": "dashed",
-                                            "borderRadius": "12px",
+                                            "borderRadius": "6px",
                                             "textAlign": "center",
                                             "borderColor": "var(--border-glass)",
                                             "backgroundColor": "var(--bg-secondary)",
